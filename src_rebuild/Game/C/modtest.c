@@ -5,6 +5,9 @@
 #include "mission.h"
 #include "system.h"
 #include "pad.h"
+#include "cell.h"
+#include "map.h"
+#include "models.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +50,79 @@ void ModTest_Frame(void)
 		return;
 
 	f++;
+
+	// gModTestMode 7 = lamp test: knock over the nearest lamp post, screenshots while it falls
+	if (gModTestMode == 7)
+	{
+		extern int Lamp_KnockOver(CELL_OBJECT* cop, PACKED_CELL_OBJECT* ppco, int dirX, int dirZ, int speed);
+		static int knockF = -1;
+
+		if (f == 120)
+		{
+			int cx, cz, bestD = 0x7fffffff;
+			PACKED_CELL_OBJECT* best = NULL;
+			CELL_OBJECT bestCo;
+			CELL_ITERATOR ci;
+
+			for (cz = current_cell_z - 6; cz <= current_cell_z + 6; cz++)
+				for (cx = current_cell_x - 6; cx <= current_cell_x + 6; cx++)
+				{
+					PACKED_CELL_OBJECT* ppco;
+					for (ppco = GetFirstPackedCop(cx, cz, &ci, 0); ppco; ppco = GetNextPackedCop(&ci))
+					{
+						CELL_OBJECT co;
+						MODEL* m;
+						int dx, dz, d;
+
+						QuickUnpackCellObject(ppco, &ci.nearCell, &co);
+						m = modelpointers[co.type];
+						if (!m || !(m->flags2 & MODEL_FLAG_LAMP))
+							continue;
+
+						dx = co.pos.vx - player[0].pos[0];
+						dz = co.pos.vz - player[0].pos[2];
+						d = dx * dx / 16 + dz * dz / 16;
+
+						// only lamps ahead of the car (in view), at least ~10 m away
+						{
+							int hd = car_data[player[0].playerCarId].hd.direction;
+							int ahead = (dx * RSIN(hd) + dz * RCOS(hd)) / 4096;
+							if (ahead < 2500)
+								continue;
+						}
+						if (d < bestD) { bestD = d; best = ppco; bestCo = co; }
+					}
+				}
+
+			if (best)
+			{
+				// fall away from the camera-ish: along the player's car heading
+				int dir = car_data[player[0].playerCarId].hd.direction + 1024;
+				Lamp_KnockOver(&bestCo, best, RSIN(dir), RCOS(dir), 0x3000 / 64);
+				knockF = f;
+			}
+			else
+			{
+				printf("MODTEST lamp none found\n");
+				fflush(stdout);
+				exit(0);
+			}
+		}
+
+		if (knockF > 0)
+		{
+			int t = f - knockF;
+			if (t == 1 || t == 8 || t == 14 || t == 20 || t == 40)
+			{
+				char name[64];
+				sprintf(name, "modtest_lamp_%02d.bmp", t);
+				Shot(name);
+			}
+			if (t == 41)
+				exit(0);
+		}
+		return;
+	}
 
 	// gModTestMode 6 = traffic test: count cars over time, screenshot
 	if (gModTestMode == 6)

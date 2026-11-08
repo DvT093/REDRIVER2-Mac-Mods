@@ -855,6 +855,11 @@ void StepSim(void)
 
 	SetUpTrafficLightPhase();
 	MoveSmashable_object();
+
+	{
+		extern void Lamp_Update(void);	// [mod] falling lamp posts
+		Lamp_Update();
+	}
 	//animate_garage_door();
 	StepEvents();
 	HandleMission();
@@ -2056,6 +2061,11 @@ int redriver2_main(int argc, char** argv)
 				gModTestMode = 4;
 				i++;
 			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "lamp"))
+			{
+				gModTestMode = 7;
+				i++;
+			}
 			else if (argc - i > 1 && !strcmp(argv[i + 1], "traffic"))
 			{
 				gModTestMode = 6;
@@ -2383,6 +2393,11 @@ void RenderGame2(int view)
 	current->ot += 10;
 
 	DrawSmashable_sprites();
+
+	{
+		extern void Lamp_Draw(void);	// [mod]
+		Lamp_Draw();
+	}
 	HandleDebris();
 
 	current->ot -= 10;
