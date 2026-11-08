@@ -8,6 +8,7 @@
 #include "cell.h"
 #include "map.h"
 #include "models.h"
+#include "dr2roads.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -310,8 +311,22 @@ void ModTest_Frame(void)
 		return;
 	}
 
+	if (f == 55 && getenv("REDRIVER2_TEST_RIDEHEIGHT") && player[0].playerCarId >= 0)
+	{
+		CAR_DATA* cp = &car_data[player[0].playerCarId];
+		VECTOR g;
+		g.vx = cp->hd.where.t[0]; g.vy = cp->hd.where.t[1]; g.vz = cp->hd.where.t[2];
+		printf("MODTEST rideheight body=%d ground=%d diff=%d\n", cp->hd.where.t[1], MapHeight(&g), cp->hd.where.t[1] - MapHeight(&g));
+		fflush(stdout);
+		exit(0);
+	}
+
 	if (f == 60 && player[0].playerType == 1 && player[0].playerCarId >= 0)
 		ActivatePlayerPedestrian(&car_data[player[0].playerCarId], NULL, 0, NULL, TANNER_MODEL);
+
+	// optional: turn Tanner (degrees*4096/360 via env) so the camera sees things from the side
+	if (f == 90 && getenv("REDRIVER2_TEST_TURN") && player[0].pPed)
+		player[0].pPed->dir.vy = (player[0].pPed->dir.vy + atoi(getenv("REDRIVER2_TEST_TURN"))) & 0xfff;
 
 	if (f == 150)
 		Shot("modtest_1_onfoot.bmp");

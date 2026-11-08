@@ -1,4 +1,6 @@
-﻿#include "driver2.h"
+﻿#include <stdlib.h>
+#define HAVANA_VAN_LIFT -70	// [mod] wheel mount offset for the Havana van: negative = body higher (measured: -60 = 60 units higher)
+#include "driver2.h"
 #include "handling.h"
 #include "cosmetic.h"
 #include "mission.h"
@@ -181,6 +183,19 @@ void FixCarCos(CAR_COSMETICS* carCos, int externalModelNumber)
 	doWheels = 1;
 
 	UpdateCarPoints(carCos);
+
+	// [mod] Havana van (special car, external model 11): sit higher on its wheels
+	if (GameLevel == 1 && externalModelNumber == 11)
+	{
+		int lift = HAVANA_VAN_LIFT, w;
+		const char* v = getenv("REDRIVER2_VAN_LIFT");	// test override
+
+		if (v)
+			lift = atoi(v);
+
+		for (w = 0; w < 4; w++)
+			carCos->wheelDisp[w].vy += lift;
+	}
 
 	if (ActiveCheats.cheat10) // [A] cheat for secret car - Fireboyd78
 	{

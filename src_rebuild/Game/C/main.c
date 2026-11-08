@@ -2042,7 +2042,8 @@ int redriver2_main(int argc, char** argv)
 			{
 				const char* c = getenv("REDRIVER2_TEST_CITY");	// [mod test] 0-3
 				int city = c ? atoi(c) & 3 : 0;
-				wantedCar[0] = carNumLookup[city][0];
+				const char* car = getenv("REDRIVER2_TEST_CAR");	// [mod test] car selection 0-9
+				wantedCar[0] = carNumLookup[city][car ? atoi(car) % 10 : 0];
 				gCurrentMissionNumber = 50 + city * 2;
 			}
 
