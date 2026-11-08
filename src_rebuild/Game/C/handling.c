@@ -1,5 +1,5 @@
 ﻿#include <stdlib.h>
-#define HAVANA_VAN_LIFT -70	// [mod] wheel mount offset for the Havana van: negative = body higher (measured: -60 = 60 units higher)
+#define HAVANA_VAN_LIFT -15	// [mod] wheel mount offset for the Havana van: negative = body higher (-70 looked absurd; -15 = a little air above the tyres)
 #include "driver2.h"
 #include "handling.h"
 #include "cosmetic.h"
