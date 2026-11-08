@@ -1583,9 +1583,11 @@ void State_GameLoop(void* param)
 		extern void ColourDump_Frame(void);	// [mod]
 		extern void ModTest_Frame(void);
 		extern void Traffic_Update(void);	// [mod] dynamic traffic
+		extern void Pistol_CarFrame(void);	// [mod] shooting from the car
 		ColourDump_Frame();
 		ModTest_Frame();
 		Traffic_Update();
+		Pistol_CarFrame();
 	}
 
 	// moved from StepGame
@@ -2062,6 +2064,11 @@ int redriver2_main(int argc, char** argv)
 				gModTestMode = 4;
 				i++;
 			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "driveby"))
+			{
+				gModTestMode = 9;
+				i++;
+			}
 			else if (argc - i > 1 && !strcmp(argv[i + 1], "cops"))
 			{
 				gModTestMode = 8;
@@ -2402,7 +2409,9 @@ void RenderGame2(int view)
 
 	{
 		extern void Lamp_Draw(void);	// [mod]
+		extern void Pistol_CarDraw(void);	// [mod] arm + pistol out of the car window
 		Lamp_Draw();
+		Pistol_CarDraw();
 	}
 	HandleDebris();
 

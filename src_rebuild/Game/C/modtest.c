@@ -52,6 +52,24 @@ void ModTest_Frame(void)
 
 	f++;
 
+	// gModTestMode 9 = drive-by: shoot forward, left (camera left), right (camera right)
+	if (gModTestMode == 9)
+	{
+		extern int gCarShootTest;
+
+		if (f == 120) { gCarShootTest = 3; gModTestCarPad = 0; }
+		if (f == 122) Shot("modtest_car_fwd.bmp");
+		if (f == 130) { gCarShootTest = 0; gModTestCarPad = MPAD_L2; }
+		if (f == 160) gCarShootTest = 1;
+		if (f == 162) Shot("modtest_car_left.bmp");
+		if (f == 170) { gCarShootTest = 0; gModTestCarPad = MPAD_R2; }
+		if (f == 200) gCarShootTest = 2;
+		if (f == 202) Shot("modtest_car_right.bmp");
+		if (f == 210) { gCarShootTest = 0; gModTestCarPad = 0; }
+		if (f == 220) exit(0);
+		return;
+	}
+
 	// gModTestMode 8 = cops hear shots: on foot, shoot every 2 s, count cops/pursuers
 	if (gModTestMode == 8)
 	{

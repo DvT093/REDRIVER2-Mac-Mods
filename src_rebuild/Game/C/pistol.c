@@ -214,7 +214,7 @@ static int RayHitCar(CAR_DATA* cp, int ox, int oz, int dx, int dz, int range)
 	return (int)(tmin / 4096);
 }
 
-static void ScarePedestrians(LPPEDESTRIAN tanner)
+static void ScarePedestrians(int sx, int sz)
 {
 	LPPEDESTRIAN p;
 
@@ -222,18 +222,27 @@ static void ScarePedestrians(LPPEDESTRIAN tanner)
 	{
 		int dx, dz;
 
-		if (p == tanner || p->pedType != CIVILIAN)
+		if (p == player[0].pPed || p->pedType != CIVILIAN)
 			continue;
 
-		dx = p->position.vx - tanner->position.vx;
-		dz = p->position.vz - tanner->position.vz;
+		dx = p->position.vx - sx;
+		dz = p->position.vz - sz;
 
 		if (ABS(dx) > PISTOL_SCARE_RANGE || ABS(dz) > PISTOL_SCARE_RANGE)
 			continue;
 
-		bAvoidTanner = 1;
-		SetupCivJump(p, NULL);
-		bAvoidTanner = 0;
+		if (player[0].pPed)
+		{
+			// on foot: dive away from Tanner
+			bAvoidTanner = 1;
+			SetupCivJump(p, NULL);
+			bAvoidTanner = 0;
+		}
+		else if (player[0].playerCarId >= 0)
+		{
+			// in the car (Tanner has no pedestrian then): dive away from the car
+			SetupCivJump(p, &car_data[player[0].playerCarId]);
+		}
 	}
 }
 
@@ -252,20 +261,13 @@ static int AimHeightAt(int oy, int t, VECTOR* at)
 	return (y > ground - 10) ? ground - 10 : y;
 }
 
-static void Fire(LPPEDESTRIAN tanner)
+// one shot from (ox, oy, oz) in direction ang (yaw); excludeCar = the shooter's own car (-1 = none)
+static void FireFrom(int ox, int oy, int oz, int ang, int excludeCar)
 {
-	int ox, oz, oy, dx, dz;
-	int ang, i, best = -1, bestT = PISTOL_RANGE;
+	int dx, dz;
+	int i, best = -1, bestT = PISTOL_RANGE;
 	int wallT = PISTOL_RANGE;
 	VECTOR hit, vel;
-
-	ox = tanner->position.vx;
-	oz = tanner->position.vz;
-	oy = g_haveMuzzle ? g_lastMuzzle.vy : tanner->position.vy - 60;	// shot height = muzzle (up is negative)
-
-	ang = tanner->dir.vy - 2048;
-
-	// no auto-aim: the shot goes straight where Tanner faces (his choice, 8 nov 2026)
 
 	dx = RSIN(ang);
 	dz = RCOS(ang);
@@ -299,7 +301,7 @@ static void Fire(LPPEDESTRIAN tanner)
 		CAR_DATA* cp = &car_data[i];
 		int r, t;
 
-		if (cp->controlType == CONTROL_TYPE_NONE || !cp->ap.carCos)
+		if (cp->controlType == CONTROL_TYPE_NONE || !cp->ap.carCos || i == excludeCar)
 			continue;
 
 		(void)r;
@@ -374,7 +376,7 @@ static void Fire(LPPEDESTRIAN tanner)
 	g_flashFrames = 3;
 
 	PlayShotSound();
-	ScarePedestrians(tanner);
+	ScarePedestrians(ox, oz);
 
 	// cops within hearing range react, whichever way they are facing
 	{
@@ -406,11 +408,25 @@ static void Fire(LPPEDESTRIAN tanner)
 		}
 	}
 
-	// felony: NoteFelony zeroes it for Tanner on foot, so raise it directly
-	if (pedestrianFelony < FELONY_MAX_VALUE - PISTOL_FELONY)
-		pedestrianFelony += PISTOL_FELONY;
-	else
-		pedestrianFelony = FELONY_MAX_VALUE;
+	// felony (NoteFelony zeroes it for Tanner on foot and needs cops to see you): raise it directly,
+	// on the car you sit in or on Tanner
+	{
+		short* fel = (player[0].playerType == 1 && player[0].playerCarId >= 0)
+			? &car_data[player[0].playerCarId].felonyRating : &pedestrianFelony;
+
+		if (*fel < FELONY_MAX_VALUE - PISTOL_FELONY)
+			*fel += PISTOL_FELONY;
+		else
+			*fel = FELONY_MAX_VALUE;
+	}
+}
+
+static void Fire(LPPEDESTRIAN tanner)
+{
+	int oy = g_haveMuzzle ? g_lastMuzzle.vy : tanner->position.vy - 60;	// shot height = muzzle (up is negative)
+
+	// no auto-aim: the shot goes straight where Tanner faces (his choice, 8 nov 2026)
+	FireFrom(tanner->position.vx, oy, tanner->position.vz, tanner->dir.vy - 2048, -1);
 }
 
 // [mod test] fire without a key press
@@ -821,4 +837,177 @@ int Sprint_Held(void)
 		return 1;
 #endif
 	return gSprintTest;
+}
+
+// ---- REDRIVER2 mac mod: shooting from the car (drive-by) ----
+// F (held = autofire) while driving in Take a Ride. Look left (A / L2) = arm out of the
+// left window, look right (D / R2) = out of the right window, otherwise forward out of
+// the driver's window. Tanner isn't drawn in the car: only his arm and the pistol.
+
+#include "pad.h"
+
+static int g_carArmFrames = 0;		// arm visible for a moment after shooting
+static VECTOR g_carShoulder, g_carHand;	// world (camera convention: up = negative y)
+static int g_carAimYaw = 0;
+int gCarShootTest = 0;				// -modtest: 1 = left, 2 = right, 3 = forward
+
+static void CarArmGeometry(CAR_DATA* cp, int side)
+{
+	int d = cp->hd.direction;
+	int fx = RSIN(d), fz = RCOS(d);		// forward
+	int rx = RCOS(d), rz = -RSIN(d);	// right
+	int hw = cp->ap.carCos->colBox.vx;
+	int hl = cp->ap.carCos->colBox.vz;
+	int hh = cp->ap.carCos->colBox.vy;
+	int cx = cp->hd.where.t[0], cy = -cp->hd.where.t[1], cz = cp->hd.where.t[2];
+	int sideSign = (side > 0) ? 1 : -1;		// forward shots: driver's (left) window
+	int ux, uz;
+
+	// shoulder just inside the window, a bit ahead of the car centre, at window height
+	g_carShoulder.vx = cx + FIXEDH(rx * (hw - 40) * sideSign) + FIXEDH(fx * hl / 8);
+	g_carShoulder.vz = cz + FIXEDH(rz * (hw - 40) * sideSign) + FIXEDH(fz * hl / 8);
+	g_carShoulder.vy = cy - hh * 3 / 2;
+
+	if (side == 0)
+	{
+		// forward: arm leans out of the driver's window and points ahead
+		ux = fx; uz = fz;
+		g_carHand.vx = g_carShoulder.vx + FIXEDH(rx * 60 * sideSign) + FIXEDH(fx * 70);
+		g_carHand.vz = g_carShoulder.vz + FIXEDH(rz * 60 * sideSign) + FIXEDH(fz * 70);
+	}
+	else
+	{
+		ux = rx * sideSign; uz = rz * sideSign;
+		g_carHand.vx = g_carShoulder.vx + FIXEDH(ux * 100);
+		g_carHand.vz = g_carShoulder.vz + FIXEDH(uz * 100);
+	}
+
+	g_carHand.vy = g_carShoulder.vy + 6;
+	g_carAimYaw = ratan2(ux, uz);
+}
+
+// called once per frame from the game loop
+void Pistol_CarFrame(void)
+{
+	static int prevF = 0;
+	CAR_DATA* cp;
+	int side, fire;
+
+	KeyPressed(SDL_SCANCODE_F, &prevF);
+	fire = prevF || gCarShootTest;
+
+	if (GameType != GAME_TAKEADRIVE || player[0].playerType != 1 || player[0].playerCarId < 0)
+	{
+		g_carArmFrames = 0;
+		return;
+	}
+
+	cp = &car_data[player[0].playerCarId];
+
+	if (!cp->ap.carCos)
+		return;
+
+	if (g_cooldown > 0)
+		g_cooldown--;
+
+	if (gCarShootTest)
+		side = (gCarShootTest == 1) ? -1 : (gCarShootTest == 2) ? 1 : 0;
+	else if ((Pads[0].mapped & MPAD_L2) && !(Pads[0].mapped & MPAD_R2))
+		side = -1;
+	else if ((Pads[0].mapped & MPAD_R2) && !(Pads[0].mapped & MPAD_L2))
+		side = 1;
+	else
+		side = 0;
+
+	CarArmGeometry(cp, side);
+
+	if (fire)
+	{
+		g_carArmFrames = 30;
+
+		if (g_cooldown == 0)
+		{
+			VECTOR muzzle;
+
+			muzzle.vx = g_carHand.vx + FIXEDH(RSIN(g_carAimYaw) * 26);
+			muzzle.vz = g_carHand.vz + FIXEDH(RCOS(g_carAimYaw) * 26);
+			muzzle.vy = g_carHand.vy;
+
+			FireFrom(muzzle.vx, muzzle.vy, muzzle.vz, g_carAimYaw, player[0].playerCarId);
+			g_cooldown = PISTOL_FIRE_INTERVAL;
+		}
+	}
+}
+
+// called during drawing: arm + pistol (+ flash and tracer) out of the window
+void Pistol_CarDraw(void)
+{
+	VECTOR sh, hand, m;
+	int ux, uy, uz, px, py, pz, qx, qy, qz, len;
+	MATRIX savedGte;
+
+	if (g_carArmFrames <= 0 || player[0].playerType != 1)
+		return;
+
+	g_carArmFrames--;
+
+	gte_ReadRotMatrix(&savedGte);
+
+	sh.vx = g_carShoulder.vx - camera_position.vx;
+	sh.vy = g_carShoulder.vy - camera_position.vy;
+	sh.vz = g_carShoulder.vz - camera_position.vz;
+
+	hand.vx = g_carHand.vx - camera_position.vx;
+	hand.vy = g_carHand.vy - camera_position.vy;
+	hand.vz = g_carHand.vz - camera_position.vz;
+
+	// arm: dark suit sleeve from shoulder to hand
+	ux = hand.vx - sh.vx; uy = hand.vy - sh.vy; uz = hand.vz - sh.vz;
+	len = SquareRoot0(ux * ux + uy * uy + uz * uz);
+	Norm(&ux, &uy, &uz, 4096);
+	px = -uz; py = 0; pz = ux;
+	Norm(&px, &py, &pz, 4096);
+	qx = 0; qy = -4096; qz = 0;		// up
+
+	GunBox(&sh, ux, uy, uz, px, py, pz, qx, qy, qz, 0, len, 9, 9, 22);
+
+	// hand (skin)
+	GunBox(&hand, ux, uy, uz, px, py, pz, qx, qy, qz, -4, 8, 6, 6, 120);
+
+	// pistol along the aim direction
+	ux = RSIN(g_carAimYaw); uy = 0; uz = RCOS(g_carAimYaw);
+	px = -uz; py = 0; pz = ux;
+	GunBox(&hand, ux, uy, uz, px, py, pz, qx, qy, qz, -3, 24, 3, 4, 18);
+
+	{
+		VECTOR g;
+		g.vx = hand.vx + (ux * 2 - qx * 7) / 4096;
+		g.vy = hand.vy + (uy * 2 - qy * 7) / 4096;
+		g.vz = hand.vz + (uz * 2 - qz * 7) / 4096;
+		GunBox(&g, qx, qy, qz, px, py, pz, ux, uy, uz, -6, 6, 3, 3, 12);
+	}
+
+	m.vx = hand.vx + ux * 26 / 4096;
+	m.vy = hand.vy;
+	m.vz = hand.vz + uz * 26 / 4096;
+
+	if (g_tracerFrames > 0)
+	{
+		VECTOR e;
+		e.vx = g_tracerEnd.vx - camera_position.vx;
+		e.vy = g_tracerEnd.vy - camera_position.vy;
+		e.vz = g_tracerEnd.vz - camera_position.vz;
+
+		DrawTracer(&m, &e);
+		g_tracerFrames--;
+	}
+
+	if (g_flashFrames > 0)
+	{
+		DrawMuzzleFlash(&m, ux, uy, uz, px, py, pz, qx, qy, qz);
+		g_flashFrames--;
+	}
+
+	gte_SetRotMatrix(&savedGte);
+	gte_SetTransMatrix(&savedGte);
 }
