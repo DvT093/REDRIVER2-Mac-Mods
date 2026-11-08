@@ -1,0 +1,31 @@
+# Driver 2 (REDRIVER2) on macOS - mods
+
+REDRIVER2 = open-source PC port of Driver 2 (PS1), built from the Apple Silicon branch. Diederick plays it and asks for gameplay mods. He is not a developer: answer in Dutch, short, and show results (screenshots), not code.
+
+## Where things live
+- Source + git: `src/` (branch `mac-mods`, local only, never push). `src/src_rebuild/PsyCross` is a submodule on its own `mac-mods` branch: commit the submodule first, then the main repo (the submodule pointer).
+- Game logic: `src/src_rebuild/Game/C/` (mods marked `// [mod]`). Own files: `pistol.c`, `gps_route.c`, `lamps.c`, `traffic.c`, `farcity.c`, `modtest.c`, `colourdump.c`. PS1 API / renderer: `PsyCross/`.
+- Runtime: `game/` (binary, `config.ini`, `mod/gunshot.wav`, `mod/DRIVER2/LEVELS` + `NLEVELS` = extracted level copy for the far city, 83 MB, not in git). `Driver 2.app` starts `game/REDRIVER2` without Terminal.
+- Backup of files outside git: `src/mac/` (build.sh, config.ini, app launcher, gunshot.wav, `extract_levels.py`). Copy `game/config.ini` to `src/mac/config.ini` when you change it.
+- Feature notes (his task list): Obsidian vault `~/Projects/todo/Obsidian/Initiate/tasks/Driver 2.md` (parent, key table) + one note per feature in `notes & resources/Driver 2/REDRIVER2 - <feature>.md`. Vault rules from `~/Projects/todo/CLAUDE.md` apply there (no blank lines, `## Hoe het werkt` above `## Plan`, tick the parent checkbox when done).
+
+## Build
+- Always `./build.sh` from this folder: premake + make (release_arm64) + rm/cp/codesign into `game/`. Copying over the binary without re-signing gets it killed by macOS.
+- One build at a time, never in parallel (16 GB laptop; parallel builds crashed it on 2 Nov 2026). Do not run a game test while building.
+- `jq` is an asdf shim without a version here: use `python3` for JSON.
+
+## Test before handing over (he expects this)
+- `cd game && ./REDRIVER2 -nointro -nofmv -modtest [mode]` drives the game itself, takes screenshots `modtest_*.bmp` and quits. Modes: (none) pistol, `aim`, `sprint`, `exit`, `cops`, `driveby`, `farview` (+ `REDRIVER2_TEST_DRIVE=1`), see `modtest.c`.
+- Screenshots are upside down: `sips -f vertical -s format png x.bmp --out ../testshots/x.png`, then look at them (crop/compare with PIL).
+- Useful env: `REDRIVER2_TEST_CITY=0..3`, `REDRIVER2_TEST_CAR=0..9`, `REDRIVER2_TEST_TURN`, `REDRIVER2_VIEW_CELLS`, `REDRIVER2_FAR_CITY=0`, `REDRIVER2_NO_SKY=1`, `REDRIVER2_DRAW_DIAG=1`, `REDRIVER2_SPLIT_DIAG=1`, `REDRIVER2_VAN_LIFT`, `REDRIVER2_FE_KEYS="....XDX.S..Q"` (scripted menu input: X/T/U/D/L/R, S = screenshot, Q = quit).
+- Run the old regression set after renderer or core changes: default modtest (pistol hits), `driveby` (CARSHOT 4 directions), `farview`.
+- Runs are not deterministic (traffic): compare numbers, or toggle a feature with env in the same position.
+
+## Gotchas (each cost real time)
+- Custom drawing: save and restore GTE matrices around it (`gte_ReadRotMatrix`/`gte_SetRotMatrix`/`gte_SetTransMatrix`), or Tanner disappears. With PGXP, write screen coords straight into the primitive (`gte_stsxy3`), else nothing shows.
+- Y axis: peds/cells/camera up = negative; car `hd.where.t[1]` up = positive.
+- Keys for mods are read with `SDL_GetKeyboardState` (not in replays). Up+Space = the game's leave-car combo; moving exit is Enter only.
+- Car bitfields are `CARBITS` (128-bit) for `MAX_CARS` 120; `CAR_DATA.id` is a char.
+- Far distance: GTE depth is 16-bit (saturates ~65535 units), OT index past `OTSIZE` was silently dropped (`OT_CLAMP`), integer back-face test drops sub-pixel faces (`FarFacing`), renderer far plane 8000. PsyCross used to make one draw split per polygon; keep `AddSplit` free of the depth comparison.
+- The red triangles at the bottom during a chase are the original cop indicators, not a bug.
+- Chicago car slot 8 crashes without `CARMODEL_11_clean.MDL`; keep it out of the car menu.
