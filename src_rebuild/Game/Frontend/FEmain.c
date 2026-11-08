@@ -1687,6 +1687,35 @@ void PadChecks(void)
 	feNewPad = Pads[0].mapnew;
 	fePad = Pads[0].mapped;
 
+	// [mod test] REDRIVER2_FE_KEYS: scripted menu input, one key per 20 frames
+	// X = cross, T = triangle, U/D/L/R = d-pad, . = wait, S = screenshot (modtest_fe_<n>.bmp), Q = quit
+	{
+		static int feFrame = 0, feKey = 0, feShot = 0;
+		const char* keys = getenv("REDRIVER2_FE_KEYS");
+
+		if (keys && ++feFrame % 20 == 0 && keys[feKey])
+		{
+			char k = keys[feKey++];
+			extern void PsyX_TakeScreenshot();
+
+			if (k == 'X') feNewPad = MPAD_CROSS;
+			else if (k == 'T') feNewPad = MPAD_TRIANGLE;
+			else if (k == 'U') feNewPad = MPAD_D_UP;
+			else if (k == 'D') feNewPad = MPAD_D_DOWN;
+			else if (k == 'L') feNewPad = MPAD_D_LEFT;
+			else if (k == 'R') feNewPad = MPAD_D_RIGHT;
+			else if (k == 'S')
+			{
+				char name[32];
+				PsyX_TakeScreenshot();
+				sprintf(name, "modtest_fe_%d.bmp", feShot++);
+				remove(name);
+				rename("SCREENSHOT.BMP", name);
+			}
+			else if (k == 'Q') exit(0);
+		}
+	}
+
 	for (int i = 0; i < 2; i++) 
 	{
 		if (Pads[i].type < 2) 
@@ -2298,6 +2327,10 @@ int CarSelectScreen(int bSetup)
 				CarAvailability[3][i] = unlocked;
 			}
 		}
+
+		// [mod] the Havana van (slot 8) is always selectable, not only after finishing the story
+		if (NumPlayers == 1)
+			CarAvailability[1][8] = 1;
 
 #ifdef PSX
 		if (currPlayer != 1) 
