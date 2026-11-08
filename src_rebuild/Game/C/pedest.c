@@ -1519,6 +1519,10 @@ void PingInPedestrians(void)
 
 		pingInDist = Random2(0) % 128 + 1536;
 
+		// [mod] Take a Ride: spawn at varying distances (~50-85 m) for a busier street
+		if (GameType == GAME_TAKEADRIVE && NumPlayers == 1)
+			pingInDist = 1000 + Random2(0) % 700;
+
 		randomLoc.vy = baseLoc.vy;
 		randomLoc.vx = baseLoc.vx + pingInDist * FIXEDH(RSIN(pinginPedAngle) * 8);
 		randomLoc.vz = baseLoc.vz + pingInDist * FIXEDH(RCOS(pinginPedAngle) * 8);
@@ -1538,7 +1542,8 @@ void PingInPedestrians(void)
 
 				bFound = 0;
 
-				while (dx * dx + dz * dz > 15999999)
+				// [mod] Take a Ride: allow pedestrians closer together (1500 instead of 4000 units)
+				while (dx * dx + dz * dz > ((GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 2250000 : 15999999))
 				{
 					pPed = pPed->pNext;
 

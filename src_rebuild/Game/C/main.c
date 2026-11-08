@@ -913,10 +913,14 @@ void StepSim(void)
 		else if (numCivCars < maxCivCars && (NumPlayers == 1 || (NumPlayers == 2 && GameType == GAME_COPSANDROBBERS)))
 		{
 			// make 5 tries
-			for (i = 0; i < 5; i++)
+			// [mod] Take a Ride: up to 3 new cars per frame so busy traffic actually fills up
+			int wanted = (GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 3 : 1;
+			int added = 0;
+
+			for (i = 0; i < 5 * wanted && added < wanted && numCivCars < maxCivCars; i++)
 			{
 				if (PingInCivCar(15900))
-					break;
+					added++;
 			}
 		}
 
@@ -1573,8 +1577,10 @@ void State_GameLoop(void* param)
 	{
 		extern void ColourDump_Frame(void);	// [mod]
 		extern void ModTest_Frame(void);
+		extern void Traffic_Update(void);	// [mod] dynamic traffic
 		ColourDump_Frame();
 		ModTest_Frame();
+		Traffic_Update();
 	}
 
 	// moved from StepGame
@@ -2048,6 +2054,11 @@ int redriver2_main(int argc, char** argv)
 			else if (argc - i > 1 && !strcmp(argv[i + 1], "exit"))
 			{
 				gModTestMode = 4;
+				i++;
+			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "traffic"))
+			{
+				gModTestMode = 6;
 				i++;
 			}
 			else if (argc - i > 1 && !strcmp(argv[i + 1], "gps"))

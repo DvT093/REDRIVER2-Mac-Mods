@@ -282,7 +282,7 @@ void GlobalTimeStep(void)
 	static RigidBodyState _d0[MAX_CARS]; // offset 0x410
 	static RigidBodyState _d1[MAX_CARS]; // offset 0x820
 
-	int mayBeCollidingBits;
+	unsigned long long mayBeCollidingBits;
 	int tmp;
 	RigidBodyState* thisState_i, *thisState_j, * thisDelta;
 	CAR_DATA* cp, * c1;
@@ -450,7 +450,7 @@ void GlobalTimeStep(void)
 
 					// [A] optimized run to not use the box checking
 					// as it has already composed bitfield / pairs
-					if ((mayBeCollidingBits & (1 << CAR_INDEX(c1))) == 0 || (c1->hd.speed == 0 && cp->hd.speed == 0))
+					if ((mayBeCollidingBits & (1ULL << CAR_INDEX(c1))) == 0 || (c1->hd.speed == 0 && cp->hd.speed == 0))
 					{
 						continue;
 					}
@@ -1024,7 +1024,7 @@ void CheckCarToCarCollisions(void)
 		// make player handled cars always processed with precision
 		if (cp->hndType == 0)
 		{
-			cp->hd.mayBeColliding = (1 << 31);
+			cp->hd.mayBeColliding = (1ULL << 63);	// [mod] marker bit moved from 31 (now a car index)
 		}
 
 		loop1++;
@@ -1047,8 +1047,8 @@ void CheckCarToCarCollisions(void)
 				bb2->x0 < bb1->x1 && bb2->z0 < bb1->z1 && bb1->x0 < bb2->x1 &&
 				bb1->z0 < bb2->z1 && bb2->y0 < bb1->y1 && bb1->y0 < bb2->y1)
 			{
-				car_data[loop1].hd.mayBeColliding |= (1 << loop2);
-				car_data[loop2].hd.mayBeColliding |= (1 << loop1);
+				car_data[loop1].hd.mayBeColliding |= (1ULL << loop2);
+				car_data[loop2].hd.mayBeColliding |= (1ULL << loop1);
 			}
 
 			loop2++;

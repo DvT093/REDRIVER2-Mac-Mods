@@ -48,6 +48,38 @@ void ModTest_Frame(void)
 
 	f++;
 
+	// gModTestMode 6 = traffic test: count cars over time, screenshot
+	if (gModTestMode == 6)
+	{
+		extern int numCivCars, maxCivCars;
+
+		if (f == 1600)
+			Shot("modtest_traffic_busy.bmp");
+
+		if (f % 100 == 0)
+		{
+			int i, active = 0, nearby = 0;
+			for (i = 0; i < MAX_CARS; i++)
+				if (car_data[i].controlType != 0)
+				{
+					int dx = car_data[i].hd.where.t[0] - player[0].pos[0];
+					int dz = car_data[i].hd.where.t[2] - player[0].pos[2];
+					active++;
+					if (ABS(dx) < 15000 && ABS(dz) < 15000 && dx * dx + dz * dz < 15000 * 15000)
+						nearby++;
+				}
+			{
+				extern int num_pedestrians;
+				extern int Traffic_IsRush(void);
+				printf("MODTEST traffic f=%d civ=%d max=%d active=%d near75m=%d peds=%d rush=%d spd=%d\n", f, numCivCars, maxCivCars, active, nearby, num_pedestrians, Traffic_IsRush(), player[0].playerCarId >= 0 ? car_data[player[0].playerCarId].hd.speed : -1);
+			}
+			fflush(stdout);
+		}
+		if (f == 1610)
+			exit(0);
+		return;
+	}
+
 	// gModTestMode 5 = GPS test: waypoint on this city's secret car, print the route
 	if (gModTestMode == 5)
 	{

@@ -1636,8 +1636,13 @@ int CheckPingOut(CAR_DATA * cp)
 	dz = player[0].spoolXZ->vz - cp->hd.where.t[2];
 	dist = dx * dx + dz * dz;
 
-	if (dist > 24000 * 24000 && PingOutCar(cp))
-		return 1;
+	// [mod] Take a Ride: keep traffic around a bit longer (spawns go out to ~13 cells)
+	{
+		int pingOutDist = (GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 30000 : 24000;
+
+		if (dist > pingOutDist * pingOutDist && PingOutCar(cp))
+			return 1;
+	}
 
 	if (requestStationaryCivCar == 1 && distFurthestCivCarSq < dist)
 	{
@@ -2050,6 +2055,25 @@ int PingInCivCar(int minPingInDist)
 				angle = (cookieCount * ONE) / 56;
 				dx = RSIN(angle) * PINGIN_DIST_WANTED_MULT;
 				dz = RCOS(angle) * PINGIN_DIST_WANTED_MULT;
+			}
+			else if (GameType == GAME_TAKEADRIVE && NumPlayers == 1 && minPingInDist != 666)
+			{
+				// [mod] busy traffic: any angle, any distance between 7 and 13 cells,
+				// instead of 44 fixed points on an 8-cell circle (far too few road spots)
+				int mult = 7 + (Random2(0) >> 4) % 7;
+
+				angle = (Random2(0) * 37) & 0xfff;
+
+				// 70% of spawns within +/-60 degrees of where the player is heading, so you see them
+				if ((Random2(0) % 10) < 7)
+				{
+					int heading = (player[0].playerCarId >= 0) ? car_data[player[0].playerCarId].hd.direction
+						: (player[0].pPed ? player[0].pPed->dir.vy - 2048 : 0);
+
+					angle = (heading + (angle % 1366) - 683) & 0xfff;
+				}
+				dx = RSIN(angle) * mult;
+				dz = RCOS(angle) * mult;
 			}
 			else
 			{

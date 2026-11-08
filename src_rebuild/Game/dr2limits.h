@@ -17,12 +17,12 @@
 #endif
 
 #define MAX_MODEL_SLOTS			1536		// DO NOT CHANGE. No effect in upping it - limited by cell types
-#define MAX_CARS				20
+#define MAX_CARS				60		// [mod] was 20; up to 62 (64-bit collision bitfield: cars + Tanner + camera)
 
 #define MAX_CAR_MODELS			5
-#define MAX_PEDESTRIANS			28
+#define MAX_PEDESTRIANS			64		// [mod] was 28
 #define MAX_SEATED_PEDS			20
-#define MAX_PLACED_PEDS			15
+#define MAX_PLACED_PEDS			40		// [mod] was 15
 #define MAX_EXPLOSION_OBJECTS	5
 #define MAX_THROWN_BOMBS		5
 #define MAX_MOTION_CAPTURE		24

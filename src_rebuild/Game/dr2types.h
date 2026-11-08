@@ -341,7 +341,7 @@ typedef struct _HANDLING_DATA
 	int direction;
 	int front_vel;
 	int rear_vel;
-	int mayBeColliding;		// [A] now used as a bitfield to create collision pairs
+	unsigned long long mayBeColliding;	// [A] bitfield of collision pairs; [mod] 64-bit for up to 60 cars, bit 63 = 'player handled' marker
 	short revs;
 	char gear;
 	char changingGear;

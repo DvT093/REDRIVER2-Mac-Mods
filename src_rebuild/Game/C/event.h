@@ -37,7 +37,7 @@ extern EventGlobal events;
 extern CELL_OBJECT *EventCop;
 extern int event_models_active;
 
-extern int carsOnBoat;
+extern unsigned long long carsOnBoat;	// [mod] 64-bit
 
 extern void InitEvents(); // 0x0004BBD4
 extern void SetUpEvents(int full); // 0x00046258
