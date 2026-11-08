@@ -119,6 +119,10 @@ void InitCamera(PLAYER *lp)
 	if (events.cameraEvent == NULL) 
 	{
 		paddCamera = Pads[lp->padid].mapped;
+		{
+			extern int gModTestCarPad;	// [mod] test: inject look-back
+			paddCamera |= gModTestCarPad;
+		}
 
 		if (NoPlayerControl != 0 || gInGameCutsceneActive != 0)
 		{

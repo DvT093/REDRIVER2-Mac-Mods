@@ -849,7 +849,7 @@ int Sprint_Held(void)
 static int g_carArmFrames = 0;		// arm visible for a moment after shooting
 static VECTOR g_carShoulder, g_carHand;	// world (camera convention: up = negative y)
 static int g_carAimYaw = 0;
-int gCarShootTest = 0;				// -modtest: 1 = left, 2 = right, 3 = forward
+int gCarShootTest = 0;				// -modtest: 1 = left, 2 = right, 3 = forward, 4 = back
 
 static void CarArmGeometry(CAR_DATA* cp, int side)
 {
@@ -860,7 +860,7 @@ static void CarArmGeometry(CAR_DATA* cp, int side)
 	int hl = cp->ap.carCos->colBox.vz;
 	int hh = cp->ap.carCos->colBox.vy;
 	int cx = cp->hd.where.t[0], cy = -cp->hd.where.t[1], cz = cp->hd.where.t[2];
-	int sideSign = (side > 0) ? 1 : -1;		// forward shots: driver's (left) window
+	int sideSign = (side == 1) ? 1 : -1;		// forward/back shots: driver's (left) window
 	int ux, uz;
 
 	// shoulder just inside the window, a bit ahead of the car centre, at window height
@@ -874,6 +874,13 @@ static void CarArmGeometry(CAR_DATA* cp, int side)
 		ux = fx; uz = fz;
 		g_carHand.vx = g_carShoulder.vx + FIXEDH(rx * 60 * sideSign) + FIXEDH(fx * 70);
 		g_carHand.vz = g_carShoulder.vz + FIXEDH(rz * 60 * sideSign) + FIXEDH(fz * 70);
+	}
+	else if (side == 2)
+	{
+		// backwards: arm out of the driver's window, pointing behind the car
+		ux = -fx; uz = -fz;
+		g_carHand.vx = g_carShoulder.vx - FIXEDH(rx * 60) - FIXEDH(fx * 70);
+		g_carHand.vz = g_carShoulder.vz - FIXEDH(rz * 60) - FIXEDH(fz * 70);
 	}
 	else
 	{
@@ -911,7 +918,9 @@ void Pistol_CarFrame(void)
 		g_cooldown--;
 
 	if (gCarShootTest)
-		side = (gCarShootTest == 1) ? -1 : (gCarShootTest == 2) ? 1 : 0;
+		side = (gCarShootTest == 1) ? -1 : (gCarShootTest == 2) ? 1 : (gCarShootTest == 4) ? 2 : 0;
+	else if ((Pads[0].mapped & MPAD_L3) || ((Pads[0].mapped & MPAD_L2) && (Pads[0].mapped & MPAD_R2)))
+		side = 2;	// looking back (S, or A+D together)
 	else if ((Pads[0].mapped & MPAD_L2) && !(Pads[0].mapped & MPAD_R2))
 		side = -1;
 	else if ((Pads[0].mapped & MPAD_R2) && !(Pads[0].mapped & MPAD_L2))
@@ -934,6 +943,17 @@ void Pistol_CarFrame(void)
 			muzzle.vy = g_carHand.vy;
 
 			FireFrom(muzzle.vx, muzzle.vy, muzzle.vz, g_carAimYaw, player[0].playerCarId);
+			{
+				extern int gModTestMode;
+				if (gModTestMode)
+				{
+					CAR_DATA* dcp = &car_data[player[0].playerCarId];
+					int d = dcp->hd.direction;
+					int dx = g_tracerEnd.vx - muzzle.vx, dz = g_tracerEnd.vz - muzzle.vz;
+					printf("CARSHOT side=%d fwd=%d right=%d\n", side,
+						FIXEDH(dx * RSIN(d) + dz * RCOS(d)), FIXEDH(dx * RCOS(d) - dz * RSIN(d)));
+				}
+			}
 			g_cooldown = PISTOL_FIRE_INTERVAL;
 		}
 	}

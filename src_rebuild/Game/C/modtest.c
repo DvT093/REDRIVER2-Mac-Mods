@@ -65,8 +65,11 @@ void ModTest_Frame(void)
 		if (f == 170) { gCarShootTest = 0; gModTestCarPad = MPAD_R2; }
 		if (f == 200) gCarShootTest = 2;
 		if (f == 202) Shot("modtest_car_right.bmp");
-		if (f == 210) { gCarShootTest = 0; gModTestCarPad = 0; }
-		if (f == 220) exit(0);
+		if (f == 210) { gCarShootTest = 0; gModTestCarPad = MPAD_L3; }
+		if (f == 240) gCarShootTest = 4;
+		if (f == 242) Shot("modtest_car_back.bmp");
+		if (f == 250) { gCarShootTest = 0; gModTestCarPad = 0; }
+		if (f == 260) exit(0);
 		return;
 	}
 
