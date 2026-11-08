@@ -2294,7 +2294,8 @@ int CarSelectScreen(int bSetup)
 		}
 
 		// setup unlockable cars
-		if (gFurthestMission == 40 && NumPlayers == 1)
+		// [mod] always unlocked (originally only after finishing the story, gFurthestMission == 40)
+		if (NumPlayers == 1)
 		{
 			for (int i = 4; i < 9; i++)
 			{
@@ -2327,10 +2328,6 @@ int CarSelectScreen(int bSetup)
 				CarAvailability[3][i] = unlocked;
 			}
 		}
-
-		// [mod] the Havana van (slot 8) is always selectable, not only after finishing the story
-		if (NumPlayers == 1)
-			CarAvailability[1][8] = 1;
 
 #ifdef PSX
 		if (currPlayer != 1) 
