@@ -914,7 +914,7 @@ void StepSim(void)
 		{
 			// make 5 tries
 			// [mod] Take a Ride: up to 3 new cars per frame so busy traffic actually fills up
-			int wanted = (GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 3 : 1;
+			int wanted = (GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 6 : 1;
 			int added = 0;
 
 			for (i = 0; i < 5 * wanted && added < wanted && numCivCars < maxCivCars; i++)

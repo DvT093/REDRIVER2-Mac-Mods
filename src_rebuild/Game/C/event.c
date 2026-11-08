@@ -544,7 +544,7 @@ static int eventHaze = 0;
 static int doneFirstHavanaCameraHack = 0;
 static SVECTOR boatOffset;
 static FixedEvent* fixedEvent = NULL;
-unsigned long long carsOnBoat = 0;	// [mod] 64-bit (up to 60 cars + Tanner + camera)
+CARBITS carsOnBoat = 0;	// [mod] 64-bit (up to 60 cars + Tanner + camera)
 
 MultiCar multiCar;
 
@@ -2402,7 +2402,7 @@ void StepEvents(void)
 	VECTOR* vel;
 	CELL_OBJECT* cop;
 	CAR_DATA* cp;
-	unsigned long long onBoatLastFrame;
+	CARBITS onBoatLastFrame;
 	int dist;
 	int thisCamera, otherCamera;
 
@@ -2429,16 +2429,16 @@ void StepEvents(void)
 					if (cp->controlType != CONTROL_TYPE_NONE &&
 						OnBoat((VECTOR*)cp->hd.where.t, ev, &dist))
 					{
-						carsOnBoat |= 1ULL << i;
+						carsOnBoat |= CARBIT(i);
 					}
 
 					i++;
 					cp++;
-				} while (i < MAX_CARS && i < 64);
+				} while (i < MAX_CARS && i < 128);
 
 				// make Tanner on boat also
 				if (player[0].playerType == 2 && OnBoat((VECTOR*)player[0].pos, ev, &dist))
-					carsOnBoat |= (1ULL << TANNER_COLLIDER_CARID) | (1ULL << CAMERA_COLLIDER_CARID);	// [mod] was 0x200000 (= camera bit with 20 cars)
+					carsOnBoat |= (CARBIT(TANNER_COLLIDER_CARID)) | (CARBIT(CAMERA_COLLIDER_CARID));	// [mod] was 0x200000 (= camera bit with 20 cars)
 
 				BoatOffset(&boatOffset, ev);
 
@@ -2474,15 +2474,15 @@ void StepEvents(void)
 			// move cars on boats
 			if ((ev->flags & 0x40) && (carsOnBoat != 0 || onBoatLastFrame != 0))
 			{
-				unsigned long long bit;
+				CARBITS bit;
 
 				speed.x = ev->position.vx - old.vx;
 				speed.z = ev->position.vz - old.vz;
 
 				// go thru cars
-				for (i = 0; i < MAX_CARS + 1 && i < 64; i++)
+				for (i = 0; i < MAX_CARS + 1 && i < 128; i++)
 				{
-					bit = (1ULL << i);
+					bit = (CARBIT(i));
 
 					if (i == TANNER_COLLIDER_CARID)
 					{
@@ -2504,7 +2504,7 @@ void StepEvents(void)
 						if (i == TANNER_COLLIDER_CARID)
 						{
 							SetTannerPosition(pos);
-							carsOnBoat &= ~(1ULL << TANNER_COLLIDER_CARID);
+							carsOnBoat &= ~(CARBIT(TANNER_COLLIDER_CARID));
 						}
 						else if ((onBoatLastFrame & bit) == 0)
 						{

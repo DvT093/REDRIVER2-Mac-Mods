@@ -2397,7 +2397,8 @@ int PingInCivCar(int minPingInDist)
 				{
 					count++;
 
-					if (count > closeEncounter)
+					// [mod] Take a Ride: allow more crowding (busy streets, jams)
+					if (count > ((GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 8 : closeEncounter))
 						return 0;
 				}
 			}
@@ -2408,7 +2409,8 @@ int PingInCivCar(int minPingInDist)
 	//if (retDistSq != 56)	// [A] This was decompiled wrong. Can't get the meaning for it
 		distSq = retDistSq;
 
-	if (distSq < (lbody * lbody * 8 * 8))
+	// [mod] Take a Ride: spawn up to ~2 car lengths from the nearest car (was ~4)
+	if (distSq < (lbody * lbody * ((GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 4 * 4 : 8 * 8)))
 		return 0;
 
 	civDat.surfInd = roadSeg;

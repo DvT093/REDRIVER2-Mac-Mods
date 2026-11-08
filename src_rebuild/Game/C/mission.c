@@ -1311,14 +1311,14 @@ int Swap2Cars(int curslot, int newslot)
 	memcpy((u_char*)&car_data[curslot], (u_char*)&cd, sizeof(CAR_DATA));
 
 	// [A] event - swap cars on boat
-	tmp = (carsOnBoat & (1ULL << newslot)) != 0;	// [mod] keep as bool (int tmp would drop bits >= 32)
-	carsOnBoat &= ~(1ULL << newslot);
+	tmp = (carsOnBoat & (CARBIT(newslot))) != 0;	// [mod] keep as bool (int tmp would drop bits >= 32)
+	carsOnBoat &= ~(CARBIT(newslot));
 
-	if (carsOnBoat & (1ULL << curslot))
-		carsOnBoat |= (1ULL << newslot);
+	if (carsOnBoat & (CARBIT(curslot)))
+		carsOnBoat |= (CARBIT(newslot));
 
 	if(tmp)
-		carsOnBoat |= (1ULL << curslot);
+		carsOnBoat |= (CARBIT(curslot));
 
 	// swap ids
 	car_data[newslot].id = newslot;

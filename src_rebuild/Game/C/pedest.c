@@ -1543,7 +1543,7 @@ void PingInPedestrians(void)
 				bFound = 0;
 
 				// [mod] Take a Ride: allow pedestrians closer together (1500 instead of 4000 units)
-				while (dx * dx + dz * dz > ((GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 2250000 : 15999999))
+				while (dx * dx + dz * dz > ((GameType == GAME_TAKEADRIVE && NumPlayers == 1) ? 1210000 : 15999999))
 				{
 					pPed = pPed->pNext;
 
