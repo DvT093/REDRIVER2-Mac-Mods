@@ -873,6 +873,17 @@ void ControlCopDetection(void)
 		}
 	}
 
+	// [mod] cops hear gunshots: a recent shot within hearing range counts as being seen
+	{
+		extern int gCopsHeardShot;
+
+		if (gCopsHeardShot > 0)
+		{
+			gCopsHeardShot--;
+			CopsCanSeePlayer = 1;
+		}
+	}
+
 #if ENABLE_GAME_ENCHANCEMENTS
 	// [A] if Tanner is outside car, cops can arrest him if they are too close
 	extern int gPistolDrawn;	// [mod] no arrest while the pistol is out

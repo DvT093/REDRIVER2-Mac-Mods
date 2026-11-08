@@ -2061,6 +2061,11 @@ int redriver2_main(int argc, char** argv)
 				gModTestMode = 4;
 				i++;
 			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "cops"))
+			{
+				gModTestMode = 8;
+				i++;
+			}
 			else if (argc - i > 1 && !strcmp(argv[i + 1], "lamp"))
 			{
 				gModTestMode = 7;

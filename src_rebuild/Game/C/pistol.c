@@ -29,6 +29,7 @@ extern int bAvoidTanner;
 extern void SetupCivJump(LPPEDESTRIAN pPed, CAR_DATA* cp);
 
 int gPistolDrawn = 0;
+int gCopsHeardShot = 0;	// frames left in which cops 'see' the player because they heard a shot
 
 // right arm aim pose (RSHOULDER, RELBOW, RHAND rotations; 4096 = full circle). Tuned with -modtest.
 SVECTOR gAimRot[3] = { { 0, -1000, 650, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } };	// measured: ~12 deg down, slightly inward (aims at cars/people)
@@ -50,6 +51,8 @@ static int g_shotLoaded = 0;
 #define PISTOL_HITS_TO_BURN	6			// hits until the car reaches max damage and catches fire
 #define PISTOL_FELONY		400			// per shot (FELONY_PURSUIT_MIN_VALUE = 658)
 #define PISTOL_SCARE_RANGE	8000
+#define PISTOL_HEAR_RANGE	30000		// ~150 m: cops within this distance hear a shot
+#define PISTOL_HEAR_FRAMES	75			// they 'see' you for ~2.5 s after a shot
 #define PISTOL_FELONY_DRAIN	32			// per frame once the pistol is away and no cop sees you
 
 static void LoadShotSound(void)
@@ -372,6 +375,36 @@ static void Fire(LPPEDESTRIAN tanner)
 
 	PlayShotSound();
 	ScarePedestrians(tanner);
+
+	// cops within hearing range react, whichever way they are facing
+	{
+		int c;
+
+		for (c = 0; c < MAX_CARS; c++)
+		{
+			CAR_DATA* cop = &car_data[c];
+			int hx, hz;
+
+			if (!((cop->controlType == CONTROL_TYPE_PURSUER_AI && cop->ai.p.dying == 0) || (cop->controlFlags & CONTROL_FLAG_COP)))
+				continue;
+
+			hx = cop->hd.where.t[0] - ox;
+			hz = cop->hd.where.t[2] - oz;
+
+			if (ABS(hx) < PISTOL_HEAR_RANGE && ABS(hz) < PISTOL_HEAR_RANGE &&
+				(long long)hx * hx + (long long)hz * hz < (long long)PISTOL_HEAR_RANGE * PISTOL_HEAR_RANGE)
+			{
+				gCopsHeardShot = PISTOL_HEAR_FRAMES;
+
+				{
+					extern int gModTestMode;
+					if (gModTestMode)
+						printf("PISTOL cop %d heard the shot at %d units\n", c, SquareRoot0((hx >> 4) * (hx >> 4) + (hz >> 4) * (hz >> 4)) << 4);
+				}
+				break;
+			}
+		}
+	}
 
 	// felony: NoteFelony zeroes it for Tanner on foot, so raise it directly
 	if (pedestrianFelony < FELONY_MAX_VALUE - PISTOL_FELONY)

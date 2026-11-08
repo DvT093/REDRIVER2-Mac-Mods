@@ -51,6 +51,34 @@ void ModTest_Frame(void)
 
 	f++;
 
+	// gModTestMode 8 = cops hear shots: on foot, shoot every 2 s, count cops/pursuers
+	if (gModTestMode == 8)
+	{
+		if (f == 60 && player[0].playerType == 1 && player[0].playerCarId >= 0)
+			ActivatePlayerPedestrian(&car_data[player[0].playerCarId], NULL, 0, NULL, TANNER_MODEL);
+		if (f == 100)
+			gPistolDrawn = 1;
+		if (f > 120 && f % 60 == 0)
+		{
+			int c, cops = 0, pursuers = 0;
+			extern int CopsCanSeePlayer;
+			extern short pedestrianFelony;
+
+			for (c = 0; c < MAX_CARS; c++)
+			{
+				if (car_data[c].controlType == CONTROL_TYPE_PURSUER_AI) pursuers++;
+				else if (car_data[c].controlFlags & CONTROL_FLAG_COP) cops++;
+			}
+
+			Pistol_TestFire();
+			printf("MODTEST cops f=%d patrolcops=%d pursuers=%d seen=%d felony=%d\n", f, cops, pursuers, CopsCanSeePlayer, pedestrianFelony);
+			fflush(stdout);
+		}
+		if (f == 2400)
+			exit(0);
+		return;
+	}
+
 	// gModTestMode 7 = lamp test: knock over the nearest lamp post, screenshots while it falls
 	if (gModTestMode == 7)
 	{
