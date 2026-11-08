@@ -1,0 +1,5 @@
+#!/bin/sh
+# Start REDRIVER2 from the game folder next to this app (data uses relative paths).
+GAME_DIR="$(cd "$(dirname "$0")/../../../game" && pwd)"
+cd "$GAME_DIR" || exit 1
+exec ./REDRIVER2
