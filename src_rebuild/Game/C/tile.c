@@ -98,7 +98,7 @@ void Tile1x1Lit(MODEL* model)
 			gte_stsv(&tmpPos);
 			GetDLightLevel(&tmpPos, (u_int*)&prims->r3);
 
-			addPrim(plotContext.ot + (Z >> 1) + ofse, prims);
+			addPrim(OT_CLAMP(plotContext.ot + (Z >> 1) + ofse), prims);
 
 			plotContext.primptr += sizeof(POLY_GT4);
 		}
@@ -181,7 +181,7 @@ void Tile1x1(MODEL *model)
 			*(ushort*)&prims->u2 = *(ushort*)&polys->uv3;
 			*(ushort*)&prims->u3 = *(ushort*)&polys->uv2;
 
-			addPrim(plotContext.ot + (Z >> 1) + ofse, prims);
+			addPrim(OT_CLAMP(plotContext.ot + (Z >> 1) + ofse), prims);
 
 			plotContext.primptr += sizeof(POLY_FT4);
 		}
@@ -472,7 +472,7 @@ void drawMesh(MVERTEX(*VSP)[5][5], int m, int n, _pct *pc)
 			prim->clut = pc->clut;
 			prim->tpage = pc->tpage;
 
-			addPrim(pc->ot + (z >> 1), prim);
+			addPrim(OT_CLAMP(pc->ot + (z >> 1)), prim);
 
 			prim++;
 		}
@@ -567,7 +567,7 @@ void drawMeshLit(MVERTEX(*VSP)[5][5], int m, int n, _pct* pc)
 			prim->clut = pc->clut;
 			prim->tpage = pc->tpage;
 
-			addPrim(pc->ot + (z >> 1), prim);
+			addPrim(OT_CLAMP(pc->ot + (z >> 1)), prim);
 
 			prim++;
 		}

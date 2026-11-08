@@ -2500,7 +2500,8 @@ void RenderGame2(int view)
 
 	if (notInDreaAndStevesEvilLair)
 	{		
-		DrawSkyDome();
+		if (!getenv("REDRIVER2_NO_SKY"))	// [mod] test: hide the sky to see what is real 3D
+			DrawSkyDome();
 
 		if (current->primtab - (current->primptr - PRIMTAB_SIZE) > 40000)
 		{

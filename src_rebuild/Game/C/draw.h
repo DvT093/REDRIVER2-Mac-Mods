@@ -48,6 +48,10 @@ extern MATRIX inv_camera_matrix;
 extern MATRIX face_camera;
 extern MATRIX frustrum_matrix;
 
+// [mod] far city: distant polygons get an OT index past the end of the table (they were
+// never drawn and wrote into other memory). Clamp to just in front of the sky (OTSIZE - 1).
+#define OT_CLAMP(p) ((p) > current->ot + OTSIZE - 2 ? current->ot + OTSIZE - 2 : (p))
+
 extern MATRIX2 matrixtable[64];
 extern MATRIX2 CompoundMatrix[64];
 

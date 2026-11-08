@@ -894,7 +894,7 @@ void PlotHorizonMDL(MODEL* model, int horizontaboffset, RGB16* skycolor)
 	count = model->num_vertices;
 
 #if USE_PGXP
-	PGXP_SetZOffsetScale(0.0f, 256.0f);
+	PGXP_SetZOffsetScale(0.0f, 256.0f * 8.0f);	// [mod] x8 with the far plane (8000, was 1000) so the sky stays behind the far city
 #endif
 
 	do

@@ -117,7 +117,9 @@ MATRIX2 matrixtable[64];
 int setupYet = 0;
 
 int gDrawDistance = PVS_CELL_COUNT * PVS_CELL_COUNT;
-int gDrawMapDump = 0;		// [mod] test: print a top-down map of the cell loop once
+int gDrawMapDump = 0;
+static int g_bandObjs[20], g_bandPolys[20], g_bandEmpty[20], g_bandPending = 0;
+extern MODEL dummyModel;		// [mod] test: print a top-down map of the cell loop once
 static char g_dmap[129][130];
 #define DMAP(h, v, ch) do { if (gDrawMapDump && ABS(h) <= 64 && ABS(v) <= 64) g_dmap[64 - (v)][64 + (h)] = (ch); } while (0)
 int gViewCells = PVS_CELL_COUNT;	// [mod] view radius in cells (Manhattan); config [game] viewCells, env REDRIVER2_VIEW_CELLS
@@ -823,6 +825,30 @@ void ConvertPolygonTypes(MODEL* model, _pct* pc)
 	}
 }
 
+// [mod] far city: back-face test in float from the PGXP camera-space vertices of the last
+// rtpt. The integer test (nclip on 320x240 screen coords) says "flat" for anything smaller
+// than a pixel, so distant buildings lost most of their faces. Same sign as nclip.
+static int g_plotFar = 0;
+static int g_nclipAgree = 0, g_nclipDisagree = 0, g_otMax = 0, g_otOver = 0;
+
+static int FarFacing(void)
+{
+#if USE_PGXP
+	float x0, y0, x1, y1, x2, y2;
+
+	if (g_FP_SXYZ0.pz <= 0.0f || g_FP_SXYZ1.pz <= 0.0f || g_FP_SXYZ2.pz <= 0.0f)
+		return 0;
+
+	x0 = g_FP_SXYZ0.px / g_FP_SXYZ0.pz; y0 = g_FP_SXYZ0.py / g_FP_SXYZ0.pz;
+	x1 = g_FP_SXYZ1.px / g_FP_SXYZ1.pz; y1 = g_FP_SXYZ1.py / g_FP_SXYZ1.pz;
+	x2 = g_FP_SXYZ2.px / g_FP_SXYZ2.pz; y2 = g_FP_SXYZ2.py / g_FP_SXYZ2.pz;
+
+	return (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0) > 0.0f;
+#else
+	return 0;
+#endif
+}
+
 void PlotBuildingModel(MODEL* model, int rot, _pct* pc)
 {
 	int opz, Z, r;
@@ -871,7 +897,13 @@ void PlotBuildingModel(MODEL* model, int rot, _pct* pc)
 			pc->colour = pc->f4colourTable[r - polys->th & 31];
 		}
 
-		if (opz > 0)
+		// [mod] far objects: float back-face test (see FarFacing)
+		if (g_bandPending && !g_plotFar && (opz > 2000 || opz < -2000))
+		{
+			if ((opz > 0) == FarFacing()) g_nclipAgree++; else g_nclipDisagree++;
+		}
+
+		if (g_plotFar ? FarFacing() : opz > 0)
 		{
 			pc->tpage = (*pc->ptexture_pages)[polys->texture_set];
 			pc->clut = (*pc->ptexture_cluts)[polys->texture_set][polys->texture_id];
@@ -901,7 +933,14 @@ void PlotBuildingModel(MODEL* model, int rot, _pct* pc)
 			*(ushort*)&prims->u2 = *(ushort*)&polys->uv3;
 			*(ushort*)&prims->u3 = *(ushort*)&polys->uv2;
 
-			addPrim(pc->ot + (Z >> 1), prims);
+			if (g_bandPending)
+			{
+				int idx = (int)(pc->ot + (Z >> 1) - current->ot);
+				if (idx > g_otMax) g_otMax = idx;
+				if (idx >= OTSIZE) g_otOver++;
+			}
+
+			addPrim(OT_CLAMP(pc->ot + (Z >> 1)), prims);
 
 			pc->primptr += sizeof(POLY_FT4);
 		}
@@ -1035,7 +1074,7 @@ void PlotBuildingModelSubdivNxN(MODEL* model, int rot, _pct* pc, int n)
 				*(ushort*)&prims->u2 = uv3;
 				*(ushort*)&prims->u3 = uv2;
 
-				addPrim(pc->ot + (Z >> 1), prims);
+				addPrim(OT_CLAMP(pc->ot + (Z >> 1)), prims);
 
 				pc->primptr += sizeof(POLY_FT4);
 			}
@@ -1125,10 +1164,27 @@ int DrawAllBuildings(CELL_OBJECT** objects, int num_buildings)
 
 		plotContext.ot = ot + zbias * 4;
 
-		if(Z <= DRAW_LOD_DIST_HIGH)
-			PlotBuildingModelSubdivNxN(model, cop->yang, &plotContext, 1);
-		else
-			PlotBuildingModel(model, cop->yang, &plotContext);
+		{
+			char* before = plotContext.primptr;
+
+			g_plotFar = Z > 30000;	// [mod] beyond ~15 cells use the float back-face test
+
+			if(Z <= DRAW_LOD_DIST_HIGH)
+				PlotBuildingModelSubdivNxN(model, cop->yang, &plotContext, 1);
+			else
+				PlotBuildingModel(model, cop->yang, &plotContext);
+
+			g_plotFar = 0;
+
+			// [mod] test: buildings and polygons per distance band (16384 units = 8 cells)
+			if (g_bandPending)
+			{
+				int band = MIN(MAX(Z, 0) / 16384, 19);
+				g_bandObjs[band]++;
+				g_bandPolys[band] += (int)(plotContext.primptr - before) / (int)sizeof(POLY_FT4);
+				if (model == &dummyModel || model->num_polys == 0) g_bandEmpty[band]++;
+			}
+		}
 
 		drawlimit = (int)(current->primptr - current->primtab);
 
@@ -1139,6 +1195,19 @@ int DrawAllBuildings(CELL_OBJECT** objects, int num_buildings)
 
 	// advance primitive buffer
 	current->primptr = plotContext.primptr;
+
+	if (g_bandPending)
+	{
+		int r;
+		for (r = 0; r < 20; r++)
+			if (g_bandObjs[r]) printf("DRAWBAND z=%6d-%6d objects=%4d polys=%5d empty=%d\n", r * 16384, r * 16384 + 16383, g_bandObjs[r], g_bandPolys[r], g_bandEmpty[r]);
+		printf("DRAWBAND nclip float vs int: agree=%d disagree=%d  OT max index=%d (size %d) over=%d\n", g_nclipAgree, g_nclipDisagree, g_otMax, OTSIZE, g_otOver);
+		g_otMax = g_otOver = 0;
+		g_nclipAgree = g_nclipDisagree = 0;
+		fflush(stdout);
+		memset(g_bandObjs, 0, sizeof(g_bandObjs)); memset(g_bandPolys, 0, sizeof(g_bandPolys)); memset(g_bandEmpty, 0, sizeof(g_bandEmpty));
+		g_bandPending = 0;
+	}
 
 	return 0;
 }
@@ -1290,7 +1359,7 @@ void PlotModelSubdivNxN(MODEL* model, int rot, _pct* pc, int n)
 				*(ushort*)&prims->u2 = uv3;
 				*(ushort*)&prims->u3 = uv2;
 
-				addPrim(pc->ot + (Z >> 1), prims);
+				addPrim(OT_CLAMP(pc->ot + (Z >> 1)), prims);
 
 				pc->primptr += sizeof(POLY_FT4);
 			}
@@ -1782,6 +1851,7 @@ void DrawMapPSX(int* comp_val)
 			camera_position.vx, camera_position.vz, drawData.cellxpos, drawData.cellzpos, camera_angle.vy & 4095, gViewCells);
 		for (r = 0; r < 129; r++)
 			printf("DRAWMAP %s\n", g_dmap[r]);
+		g_bandPending = 1;
 		fflush(stdout);
 		gDrawMapDump = 0;
 	}
