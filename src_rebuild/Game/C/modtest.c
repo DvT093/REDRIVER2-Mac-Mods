@@ -123,8 +123,12 @@ void ModTest_Frame(void)
 
 						QuickUnpackCellObject(ppco, &ci.nearCell, &co);
 						m = modelpointers[co.type];
-						if (!m || !(m->flags2 & MODEL_FLAG_LAMP))
-							continue;
+						{
+							extern int IsTrafficLightModel(MODEL* model);
+							int want = getenv("REDRIVER2_TEST_TRAFFICLIGHT") ? IsTrafficLightModel(m) : (m && (m->flags2 & MODEL_FLAG_LAMP));
+							if (!m || !want)
+								continue;
+						}
 
 						dx = co.pos.vx - player[0].pos[0];
 						dz = co.pos.vz - player[0].pos[2];

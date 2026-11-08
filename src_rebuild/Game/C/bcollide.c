@@ -843,8 +843,10 @@ int CarBuildingCollision(CAR_DATA *cp, BUILDING_BOX *building, CELL_OBJECT *cop,
 
 				debris_colour = GetDebrisColour(cp);
 
-				// [mod] lamp posts fall over when hit hard enough
-				if ((model->flags2 & MODEL_FLAG_LAMP) && strikeVel > 0x1800)
+				// [mod] lamp posts and traffic lights fall over when hit hard enough
+				extern int IsTrafficLightModel(MODEL* model);
+
+				if (((model->flags2 & MODEL_FLAG_LAMP) || IsTrafficLightModel(model)) && strikeVel > 0x1800)
 				{
 					extern int Lamp_KnockOver(CELL_OBJECT* cop, PACKED_CELL_OBJECT* ppco, int dirX, int dirZ, int speed);
 

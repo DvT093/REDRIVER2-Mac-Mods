@@ -752,3 +752,27 @@ void animate_garage_door(void)
 
 
 
+
+// ---- REDRIVER2 mac mod ----
+// traffic lights are animated objects; their type ids (per city) are the ones that follow
+// junctionLightsPhase in animate_object (objanim.c)
+int IsTrafficLightModel(MODEL* model)
+{
+	int id;
+
+	if (!model || !(model->flags2 & MODEL_FLAG_ANIMOBJ))
+		return 0;
+
+	id = Level_AnimatingObjectPtrs[GameLevel][model->tri_verts & 31].internal_id;
+
+	switch (GameLevel)
+	{
+		case 0: return id == 0 || id == 1 || id == 7 || id == 8;	// Chicago
+		case 1: return id == 0;									// Havana
+		case 2: return id == 0 || id == 1;						// Las Vegas
+		case 3: return id == 0 || id == 1;						// Rio
+	}
+
+	return 0;
+}
+
