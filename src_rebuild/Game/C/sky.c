@@ -865,7 +865,7 @@ void PlotSkyPoly(POLYFT4* polys, int skytexnum, unsigned char r, unsigned char g
 			addPrim(current->ot + OTSIZE - 1, poly);
 
 #if USE_PGXP && USE_EXTENDED_PRIM_POINTERS
-			poly->pgxp_index = 0xffff;
+			poly->pgxp_index = PGXP_INVALID_INDEX;
 #endif 
 
 			current->primptr += sizeof(POLY_FT4);

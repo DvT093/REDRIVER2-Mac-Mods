@@ -5,7 +5,7 @@
 #include "spool.h"
 
 int cell_object_index = 0;
-CELL_OBJECT cell_object_buffer[1024];
+CELL_OBJECT cell_object_buffer[8192];	// [mod] was 1024; far city unpacks more buildings per frame
 
 u_char cell_object_computed_values[2048];
 
@@ -167,7 +167,7 @@ CELL_OBJECT* UnpackCellObject(PACKED_CELL_OBJECT* ppco, XZPAIR* near)
 		return NULL;
 
 	pco = &cell_object_buffer[newIndex = cell_object_index];
-	cell_object_index = newIndex + 1 & 1023;
+	cell_object_index = newIndex + 1 & 8191;
 
 	QuickUnpackCellObject(ppco, near, pco);
 

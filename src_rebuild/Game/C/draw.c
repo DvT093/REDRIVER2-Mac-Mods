@@ -1,4 +1,6 @@
 #include "driver2.h"
+#include "farcity.h"
+#include <string.h>
 
 #include <stdlib.h>
 
@@ -115,6 +117,9 @@ MATRIX2 matrixtable[64];
 int setupYet = 0;
 
 int gDrawDistance = PVS_CELL_COUNT * PVS_CELL_COUNT;
+int gDrawMapDump = 0;		// [mod] test: print a top-down map of the cell loop once
+static char g_dmap[129][130];
+#define DMAP(h, v, ch) do { if (gDrawMapDump && ABS(h) <= 64 && ABS(v) <= 64) g_dmap[64 - (v)][64 + (h)] = (ch); } while (0)
 int gViewCells = PVS_CELL_COUNT;	// [mod] view radius in cells (Manhattan); config [game] viewCells, env REDRIVER2_VIEW_CELLS
 
 #ifndef PSX
@@ -1464,6 +1469,9 @@ void DrawMapPSX(int* comp_val)
 		drawData.farClipLimit = 60000;
 #else
 	drawData.farClipLimit = 125000;
+	// [mod] the cell walk stops at farClipLimit (~30 cells ahead); grow it with the view radius
+	if ((gViewCells + 2) * 4096 > drawData.farClipLimit)
+		drawData.farClipLimit = (gViewCells + 2) * 4096;
 #endif
 
 	drawData.tiles_found = 0;
@@ -1497,7 +1505,7 @@ void DrawMapPSX(int* comp_val)
 			if (v && atoi(v) > 0)
 				gViewCells = atoi(v);
 			if (gViewCells < 11) gViewCells = 11;
-			if (gViewCells > 64) gViewCells = 64;
+			if (gViewCells > 160) gViewCells = 160;	// [mod] was 64; far city draws beyond the loaded regions
 			envChecked = 1;
 		}
 	}
@@ -1506,6 +1514,14 @@ void DrawMapPSX(int* comp_val)
 
 	if (gViewCells > PVS_CELL_COUNT && i < (2 * gViewCells + 1) * (2 * gViewCells + 1))
 		i = (2 * gViewCells + 1) * (2 * gViewCells + 1);
+
+	FarCity_BeginFrame();
+
+	if (gDrawMapDump)
+	{
+		int r;
+		for (r = 0; r < 129; r++) { memset(g_dmap[r], ' ', 129); g_dmap[r][129] = 0; }
+	}
 
 	// walk through all cells
 	do
@@ -1528,6 +1544,7 @@ void DrawMapPSX(int* comp_val)
 #ifndef PSX
 				diag.pvs_oob_reads++;
 #endif
+				DMAP(hloop, vloop, 'O');
 			}
 			else if (drawData.rightPlane >= 0 ||
 				drawData.leftPlane <= 0 ||
@@ -1536,6 +1553,7 @@ void DrawMapPSX(int* comp_val)
 #ifndef PSX
 				diag.cells_plane_rejected++;
 #endif
+				DMAP(hloop, vloop, '-');
 			}
 			else if (cellx <= -1 || cellx >= cells_across ||
 				cellz <= -1 || cellz >= cells_down)
@@ -1543,12 +1561,14 @@ void DrawMapPSX(int* comp_val)
 #ifndef PSX
 				diag.cells_range_rejected++;
 #endif
+				DMAP(hloop, vloop, 'r');
 			}
-			else if (!PVS_ptr[vis_v * pvs_square + vis_h])
+			else if (hloop == vis_h && vloop == vis_v && !PVS_ptr[vis_v * pvs_square + vis_h])	// [mod] beyond the PVS table: draw (z-buffer hides what is behind)
 			{
 #ifndef PSX
 				diag.cells_pvs_rejected++;
 #endif
+				DMAP(hloop, vloop, '.');
 			}
 			else
 			{
@@ -1561,13 +1581,31 @@ void DrawMapPSX(int* comp_val)
 					int region = region_x + region_z * regions_across;
 
 					if (loading_region[source_region] != -1 || RoadMapRegions[source_region] != region)
+					{
 						diag.cells_unloaded_region++;
+						DMAP(hloop, vloop, gFarCity ? 'f' : 'u');
+					}
+					else
+						DMAP(hloop, vloop, 'o');
 				}
 #endif
 				// walk each cell object in cell
-				for (ppco = GetFirstPackedCop(cellx, cellz, &ci, 1, drawData.cellLevel); ppco; ppco = GetNextPackedCop(&ci))
+				// [mod] regions beyond the 4 loaded ones come from the draw-only far-city copy
+				int useFar = FarCity_CellNeedsFar(cellx, cellz);
+				for (ppco = useFar ? FarCity_First(cellx, cellz, &ci, drawData.cellLevel) : GetFirstPackedCop(cellx, cellz, &ci, 1, drawData.cellLevel);
+					ppco; ppco = useFar ? FarCity_Next(&ci) : GetNextPackedCop(&ci))
 				{
 					model = modelpointers[(ppco->value >> 6) | ((ppco->pos).vy & 1) << 10];
+					{
+						extern MODEL dummyModel;
+						if (model == &dummyModel || model->num_polys == 0)
+						{
+							if (gDrawMapDump && g_dmap[64 - vloop][64 + hloop] != 'F' && g_dmap[64 - vloop][64 + hloop] != '#' && ABS(hloop) <= 64 && ABS(vloop) <= 64)
+								g_dmap[64 - vloop][64 + hloop] = 'd';
+						}
+						else
+							DMAP(hloop, vloop, useFar ? 'F' : '#');
+					}
 
 #ifndef PSX
 					diag.packed_objects++;
@@ -1735,6 +1773,18 @@ void DrawMapPSX(int* comp_val)
 			dir = (hloop == --vloop) ? 0 : dir;
 		}
 	}while (i-- > 0);
+
+	if (gDrawMapDump)
+	{
+		int r;
+		g_dmap[64][64] = '@';
+		printf("DRAWMAP cam=%d,%d cell=%d,%d angle=%d view=%d (north up; # objects, F far objects, f far empty, o empty, u unloaded, . pvs hidden, - outside view, r outside map)\n",
+			camera_position.vx, camera_position.vz, drawData.cellxpos, drawData.cellzpos, camera_angle.vy & 4095, gViewCells);
+		for (r = 0; r < 129; r++)
+			printf("DRAWMAP %s\n", g_dmap[r]);
+		fflush(stdout);
+		gDrawMapDump = 0;
+	}
 
 #ifndef PSX
 	if (DrawDiagEnabled())

@@ -140,7 +140,7 @@ extern DRAW_MODE draw_mode_ntsc;
 #endif
 
 #if USE_EXTENDED_PRIM_POINTERS
-#	define PRIMTAB_SIZE 0x50000
+#	define PRIMTAB_SIZE 0x300000	// [mod] was 0x50000; far city draws much more
 #else
 #	define PRIMTAB_SIZE 0x1e000
 #endif

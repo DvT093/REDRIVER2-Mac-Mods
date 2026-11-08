@@ -65,10 +65,11 @@ extern MATRIX2 CompoundMatrix[64];
 
 #else
 
-#define MAX_DRAWN_BUILDINGS		384
-#define MAX_DRAWN_TILES			750
-#define MAX_DRAWN_ANIMATING		48
-#define MAX_DRAWN_SPRITES		128
+// [mod] far city: much more is drawn (was 384 / 750 / 48 / 128)
+#define MAX_DRAWN_BUILDINGS		2048
+#define MAX_DRAWN_TILES			4096
+#define MAX_DRAWN_ANIMATING		128
+#define MAX_DRAWN_SPRITES		1024
 
 #define DRAW_LOD_DIST_HIGH		7000
 #define DRAW_LOD_DIST_LOW		10000

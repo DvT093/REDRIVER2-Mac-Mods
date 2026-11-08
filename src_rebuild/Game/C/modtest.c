@@ -11,6 +11,7 @@
 #include "dr2roads.h"
 
 #include <stdio.h>
+#include <SDL.h>
 #include <stdlib.h>
 
 // REDRIVER2 mac mod: automated visual test.
@@ -51,6 +52,43 @@ void ModTest_Frame(void)
 		return;
 
 	f++;
+
+	// gModTestMode 10 = far view: stay in the car, screenshot down the street ahead and behind
+	// (name suffix from REDRIVER2_VIEW_CELLS), for draw-distance work
+	if (gModTestMode == 10)
+	{
+		char name[64];
+		const char* vc = getenv("REDRIVER2_VIEW_CELLS");
+		extern int gDrawMapDump;
+		extern int cells_across, cells_down;
+		static unsigned int t0;
+		if (f == 60) t0 = SDL_GetTicks();
+		if (f == 98) { printf("FARVIEW ms/frame=%.1f map=%dx%d cells\n", (SDL_GetTicks() - t0) / 38.0, cells_across, cells_down); fflush(stdout); }
+		if (f == 99 || f == 124) gDrawMapDump = 1;
+		if (f == 100) { sprintf(name, "modtest_far_fwd_%s.bmp", vc ? vc : "def"); Shot(name); }
+		if (f == 105) gModTestCarPad = MPAD_L3;
+		if (f == 125) { sprintf(name, "modtest_far_back_%s.bmp", vc ? vc : "def"); Shot(name); }
+		if (f == 130 && !getenv("REDRIVER2_TEST_DRIVE")) exit(0);
+
+		// optional drive: accelerate straight ahead, measure the slowest frame (far-city streaming)
+		if (f == 130) { gModTestCarPad = MPAD_CROSS; t0 = SDL_GetTicks(); }
+		if (f > 130)
+		{
+			static unsigned int last = 0, worst = 0;
+			unsigned int now = SDL_GetTicks();
+			if (last && now - last > worst) worst = now - last;
+			last = now;
+			if (f == 280) { sprintf(name, "modtest_drive1_%s.bmp", vc ? vc : "def"); Shot(name); }
+			if (f == 430)
+			{
+				sprintf(name, "modtest_drive2_%s.bmp", vc ? vc : "def"); Shot(name);
+				printf("FARVIEW drive avg ms/frame=%.1f worst=%u\n", (now - t0) / 300.0, worst);
+				fflush(stdout);
+				exit(0);
+			}
+		}
+		return;
+	}
 
 	// gModTestMode 9 = drive-by: shoot forward, left (camera left), right (camera right)
 	if (gModTestMode == 9)

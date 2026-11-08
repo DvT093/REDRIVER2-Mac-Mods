@@ -909,6 +909,11 @@ void SetCityType(CITYTYPE type)
 		// store level name as it's required by loadsectorsPC
 		strcpy(g_CurrentLevelFileName, filename);
 
+		{
+			extern char g_FarCityLevelName[64];	// [mod]
+			strcpy(g_FarCityLevelName, filename);
+		}
+
 		// spool position is forced to 0
 		citystart[GameLevel] = 0;
 
@@ -962,6 +967,11 @@ void SetCityType(CITYTYPE type)
 
 	sector = CdPosToInt((CdlLOC*)&cdfile);
 	citystart[GameLevel] = sector;
+
+	{
+		extern char g_FarCityLevelName[64];	// [mod] far city reads its own copy of this file
+		strcpy(g_FarCityLevelName, filename);
+	}
 
 	do {
 		do {

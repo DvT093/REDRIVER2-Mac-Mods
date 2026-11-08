@@ -1,4 +1,5 @@
 #include "driver2.h"
+#include "farcity.h"
 
 #ifndef PSX
 #include <stdint.h>
@@ -867,6 +868,8 @@ void ProcessSpoolInfoLump(char *lump_ptr, int lump_size)
 	int i;
 	int size;
 	char *alloclist;
+
+	FarCity_Reset();	// [mod] new level: drop the far-city copy
 
 	pvsSize[0] = 0;
 	pvsSize[1] = 0;

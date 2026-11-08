@@ -2064,6 +2064,11 @@ int redriver2_main(int argc, char** argv)
 				gModTestMode = 4;
 				i++;
 			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "farview"))
+			{
+				gModTestMode = 10;
+				i++;
+			}
 			else if (argc - i > 1 && !strcmp(argv[i + 1], "driveby"))
 			{
 				gModTestMode = 9;
