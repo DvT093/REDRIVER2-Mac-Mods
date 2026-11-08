@@ -95,3 +95,22 @@ int TannerStuckInCar(int doSpeedCheck, int player_id)
 
 	return 1;
 }
+// [mod] exit-car check for the player's leave-car button only:
+// no speed check and no felony/pursuit check. Missions keep using TannerStuckInCar.
+int TannerCanLeaveCarMod(int player_id)
+{
+	CAR_DATA* cp;
+	PLAYER* lp = &player[player_id];
+
+	if (lp->playerType != 1 || lp->playerCarId < 0)
+		return 0;
+
+	cp = &car_data[lp->playerCarId];
+
+	// surface type 1 under the rear wheels (kept from the original check)
+	if ((cp->hd.wheel[1].surface & 7) == 1 || (cp->hd.wheel[3].surface & 7) == 1)
+		return 0;
+
+	// car must be upright and doors unlocked
+	return cp->hd.where.m[1][1] > 99 && lockAllTheDoors == 0;
+}

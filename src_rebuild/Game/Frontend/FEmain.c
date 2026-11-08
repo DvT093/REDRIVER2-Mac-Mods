@@ -672,6 +672,11 @@ int bQuitToSystem = 0;
 int bQuitToSystemSel = 0;
 
 int carSelection = 0;
+
+// [mod] car colour choice in the car select menu (Square / keyboard Q cycles)
+#include "carcolours.h"
+int gWantedPalette[2] = { -1, -1 };
+static int carColourSel = 0;
 int currSelIndex = 0;
 int lastCutCity = -1;
 int lastCity = -1;
@@ -973,6 +978,19 @@ void DisplayOnScreenText(void)
 			FEPrintStringSized(ScreenTitle, 40, 400, 3072, 1, 64, 64, 64);
 		}
 
+		// [mod] colour name in the car select menu
+		if (iScreenSelect == SCREEN_CAR && GameLevel >= 0 && GameLevel < 4)
+		{
+			char colourText[64];
+
+			if (carSelection < 4)
+				sprintf(colourText, "Colour: %s   (Q = change)", gCarColourNames[GameLevel][carSelection][carColourSel]);
+			else
+				sprintf(colourText, "Colour: standard");
+
+			FEPrintStringSized(colourText, 40, 400, 3072, 1, 128, 128, 128);
+		}
+
 		if (iScreenSelect == SCREEN_CUTSCENE)
 		{
 			text = GET_MISSION_TXT(CutSceneNames[cutSelection + CutAmountsTotal[currCity]]);
@@ -1101,6 +1119,19 @@ void DrawScreen(PSXSCREEN *pScr)
 		SetTextColour(128, 0, 0);
 
 		DisplayOnScreenText();
+
+		// [mod test] REDRIVER2_MENU_SHOT=1: screenshot the main menu and quit
+		{
+			static int menuFrames = 0;
+			extern void PsyX_TakeScreenshot();
+
+			if (getenv("REDRIVER2_MENU_SHOT") && ++menuFrames == 90)
+			{
+				PsyX_TakeScreenshot();
+				rename("SCREENSHOT.BMP", "modtest_menu.bmp");
+				exit(0);
+			}
+		}
 		
 		if (bDrawExtra) 
 		{
@@ -2373,6 +2404,7 @@ int CarSelectScreen(int bSetup)
 			{
 				feVariableSave[0] = carSelection;
 				wantedCar[0] = carNumLookup[GameLevel][carSelection];
+				gWantedPalette[0] = (carSelection < 4) ? carColourSel : -1;	// [mod]
 			}
 			else {
 				wantedCar[1] = carNumLookup[GameLevel][carSelection];
@@ -2397,6 +2429,11 @@ int CarSelectScreen(int bSetup)
 
 		EndFrame();
 #endif
+	}
+	else if ((feNewPad & MPAD_SQUARE) && carSelection < 4)	// [mod] next colour
+	{
+		carColourSel = (carColourSel + 1) % 6;
+		FESound(3);
 	}
 	else if (feNewPad & MPAD_D_UP)
 	{
@@ -3551,6 +3588,22 @@ int MainScreen(int bSetup)
 {
 	if (bSetup) 
 	{
+		// [mod] Take A Ride on top: swap the contents (label + action) of the first two
+		// buttons; positions and links stay. Checked by name so a reload re-applies it.
+		if (pCurrScreen->numButtons > 1 && strncmp(pCurrScreen->buttons[0].Name, "Take", 4) != 0
+			&& strncmp(pCurrScreen->buttons[1].Name, "Take", 4) == 0)
+		{
+			PSXBUTTON* a = &pCurrScreen->buttons[0];
+			PSXBUTTON* b = &pCurrScreen->buttons[1];
+			char name[32];
+			int t;
+
+			t = a->action; a->action = b->action; b->action = t;
+			t = a->var; a->var = b->var; b->var = t;
+			t = a->userDrawFunctionNum; a->userDrawFunctionNum = b->userDrawFunctionNum; b->userDrawFunctionNum = t;
+			memcpy(name, a->Name, 32); memcpy(a->Name, b->Name, 32); memcpy(b->Name, name, 32);
+		}
+
 		if (numPadsConnected == 2) 
 		{
 			pCurrScreen->buttons[3].action = FE_MAKEVAR(BTN_NEXT_SCREEN, 6);

@@ -1340,6 +1340,11 @@ void PauseMap(int direction)
 	map_x_shift = 0;
 	map_z_shift = 0;
 
+	// [mod] GPS cursor back to the centre each time the map opens/closes
+	extern int gMapCursorX, gMapCursorY;
+	gMapCursorX = 160;
+	gMapCursorY = 128;
+
 	if (gShowMap == 0)
 		InitOverheadMap();
 }

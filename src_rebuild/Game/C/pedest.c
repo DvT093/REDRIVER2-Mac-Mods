@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "driver2.h"
 #include "pedest.h"
 #include "players.h"
@@ -644,17 +645,39 @@ void AnimatePed(LPPEDESTRIAN pPed)
 		pPed->velocity.vy = 10;
 	}
 
+	int oldFrame = pPed->frame1;	// [mod] to detect footstep frames that get skipped when sprinting
+
 	if ((pPed->flags & 4) /*&& pPed->pedType == TANNER_MODEL*/)
 	{
 		if (pPed->frame1 == 0)
 			pPed->frame1 = 15;
 
 		pPed->frame1--;
+
+		// [mod] backward sprint: reverse run cycle ~1.6x faster
+		if (pPed == player[0].pPed && pPed->type == PED_ACTION_RUN && pPed->speed < -50)
+		{
+			static int backTick = 0;
+			if (++backTick % 3 != 0)
+			{
+				if (pPed->frame1 == 0)
+					pPed->frame1 = 15;
+				pPed->frame1--;
+			}
+		}
 	}
 	else
 	{
 		int g_cdNumFrames;
 		pPed->frame1++;
+
+		// [mod] sprinting: run cycle ~1.6x faster (extra frame on 2 of every 3 ticks)
+		if (pPed == player[0].pPed && pPed->type == PED_ACTION_RUN && pPed->speed > 50)
+		{
+			static int sprintTick = 0;
+			if (++sprintTick % 3 != 0)
+				pPed->frame1++;
+		}
 
 		if (pPed->type - 8U < 3)	// [A] TODO: figure out what type it is to have extended frames
 			g_cdNumFrames = 31;
@@ -676,10 +699,33 @@ void AnimatePed(LPPEDESTRIAN pPed)
 			surfId != SURF_SAND && 
 			surfId != SURF_DEEPWATER)
 		{
-			if (pPed->frame1 == 3)
+			// [mod] fire the step when frame 3 / 11 was reached OR skipped over this tick
+			// (sprinting advances 2 frames at a time; reverse playback counts down)
+			int f0 = oldFrame, f1 = pPed->frame1;
+			int step3, step11;
+
+			if (pPed->flags & 4)
+			{
+				// counting down, may wrap 0 -> 15
+				step3  = (f0 > 3 && f1 <= 3) || (f0 < f1 && (f1 <= 3 || f0 > 3));
+				step11 = (f0 > 11 && f1 <= 11) || (f0 < f1 && (f1 <= 11 || f0 > 11));
+			}
+			else
+			{
+				// counting up, may wrap 15 -> 0
+				step3  = (f0 < 3 && f1 >= 3) || (f1 < f0 && (f1 >= 3 || f0 < 3));
+				step11 = (f0 < 11 && f1 >= 11) || (f1 < f0 && (f1 >= 11 || f0 < 11));
+			}
+
+			{
+				extern int gModTestSteps;
+				gModTestSteps += step3 + step11;
+			}
+
+			if (step3)
 				Start3DSoundVolPitch(-1, SOUND_BANK_TANNER, 0, pPed->position.vx, -pPed->position.vy, pPed->position.vz, -5000, 0x1000);
 
-			if (pPed->frame1 == 11)
+			if (step11)
 				Start3DSoundVolPitch(-1, SOUND_BANK_TANNER, 1, pPed->position.vx, -pPed->position.vy, pPed->position.vz, -5000, 0x1000);
 		}
 	}
@@ -901,8 +947,10 @@ void PedUserRunner(LPPEDESTRIAN pPed)
 
 	if (tannerPad & TANNER_PAD_GOFORWARD)
 	{
+		extern int Sprint_Held(void);	// [mod] Shift = sprint
+
 		if (bStopTanner == 0)
-			pPed->speed = 40 - (tannerDeathTimer >> 1);
+			pPed->speed = (Sprint_Held() ? 66 : 40) - (tannerDeathTimer >> 1);
 		else
 			pPed->speed = 0;
 	}
@@ -979,10 +1027,38 @@ void PedUserWalker(LPPEDESTRIAN pPed)
 
 	if (tannerPad & TANNER_PAD_GOBACK)
 	{
-		pPed->speed = -10;
+		// [mod] backwards with the pistol out or with Shift: the run cycle played in
+		// reverse (flags & 4) at running speed; Shift = sprint speed
+		extern int gPistolDrawn;
+		extern int Sprint_Held(void);
+		int sprint = Sprint_Held();
+
+		if (pPed == player[0].pPed && (gPistolDrawn || sprint))
+		{
+			if (pPed->type != PED_ACTION_RUN)
+			{
+				pPed->type = PED_ACTION_RUN;
+				pPed->frame1 = 15;
+				SetupPedMotionData(pPed);
+			}
+
+			pPed->flags |= 4;
+			pPed->speed = sprint ? -62 : -38;
+		}
+		else
+		{
+			if (pPed->type == PED_ACTION_RUN)
+			{
+				pPed->flags &= ~4;
+				SetupWalker(pPed);
+			}
+
+			pPed->speed = -10;
+		}
 	}
 	else
 	{
+		pPed->flags &= ~4;	// [mod] stop reverse playback
 		pPed->type = PED_ACTION_STOPPING;
 		pPed->frame1 = 0;
 		pPed->speed = 0;
@@ -2609,12 +2685,43 @@ void ProcessTannerPad(LPPEDESTRIAN pPed, u_int pad, char PadSteer, char use_anal
 	else
 		tannerPad = pad;
 
+	{
+		extern int gModTestForward;	// [mod] test: hold forward
+		if (gModTestForward == 1)
+			tannerPad |= TANNER_PAD_GOFORWARD;
+		else if (gModTestForward == 2)
+			tannerPad |= MPAD_D_DOWN;	// back
+	}
+
 	if (use_analogue)
 	{
 		tannerPad = pad;
 
 		if (PadSteer != 0)
 			tannerPad |= (PadSteer < 0) ? TANNER_PAD_TURNLEFT : TANNER_PAD_TURNRIGHT;
+	}
+
+	// [mod] horn button (R1 / keyboard H) on foot: Tanner shouts "HEY!"
+	// (same voice clip a civilian uses when you take their car)
+	{
+		static u_int prevShoutPad = 0;
+		static int shoutCooldown = 0;
+
+		if (shoutCooldown > 0)
+			shoutCooldown--;
+
+		if ((tannerPad & MPAD_R1) && !(prevShoutPad & MPAD_R1) && shoutCooldown == 0)
+		{
+			Start3DSoundVolPitch(-1, SOUND_BANK_TANNER, 5, pPed->position.vx, -pPed->position.vy, pPed->position.vz, 0, 0x1000);
+			shoutCooldown = 20;
+		}
+
+		prevShoutPad = tannerPad;
+	}
+
+	{
+		extern void Pistol_Update(LPPEDESTRIAN tanner);	// [mod] pistol
+		Pistol_Update(pPed);
 	}
 
 	IHaveThePower();	// process Havana easter egg near the entrance cemetery

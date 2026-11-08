@@ -994,6 +994,16 @@ void StepSim(void)
 				t2 = Pads[*cp->ai.padid].type & 4;
 
 				// [A] handle REDRIVER2 dedicated car exit button
+				{
+					extern int gModTestCarPad;		// [mod] test: inject car buttons
+					t0 |= gModTestCarPad;
+				}
+
+				{
+					extern int gLeaveCarDedicated;	// [mod] only Enter may exit a moving car
+					gLeaveCarDedicated = (t0 & CAR_PAD_LEAVECAR_DED) != 0;
+				}
+
 				if(t0 & CAR_PAD_LEAVECAR_DED)
 				{
 					t0 &= ~CAR_PAD_LEAVECAR_DED;
@@ -1560,6 +1570,13 @@ void State_GameLoop(void* param)
 	UpdatePadData();
 	CheckForPause();
 
+	{
+		extern void ColourDump_Frame(void);	// [mod]
+		extern void ModTest_Frame(void);
+		ColourDump_Frame();
+		ModTest_Frame();
+	}
+
 	// moved from StepGame
 	if (FrameCnt == 5)
 		SetDispMask(1);
@@ -2005,6 +2022,82 @@ int redriver2_main(int argc, char** argv)
 			SetState(STATE_GAMELAUNCH);
 		}
 #endif // _DEBUG_OPTIONS
+		else if (!strcmp(argv[i], "-modtest"))	// [mod] automated visual test
+		{
+			extern int gModTestMode;
+			extern char carNumLookup[4][10];
+
+			gModTestMode = 1;
+			{
+				const char* c = getenv("REDRIVER2_TEST_CITY");	// [mod test] 0-3
+				int city = c ? atoi(c) & 3 : 0;
+				wantedCar[0] = carNumLookup[city][0];
+				gCurrentMissionNumber = 50 + city * 2;
+			}
+
+			if (argc - i > 1 && !strcmp(argv[i + 1], "aim"))
+			{
+				gModTestMode = 2;
+				i++;
+			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "sprint"))
+			{
+				gModTestMode = 3;
+				i++;
+			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "exit"))
+			{
+				gModTestMode = 4;
+				i++;
+			}
+			else if (argc - i > 1 && !strcmp(argv[i + 1], "gps"))
+			{
+				gModTestMode = 5;
+				i++;
+			}
+
+			SetFEDrawMode();
+			gInFrontend = 0;
+			AttractMode = 0;
+
+			GameType = GAME_TAKEADRIVE;
+			SetState(STATE_GAMELAUNCH);
+		}
+		else if (!strcmp(argv[i], "-dumpcolours"))	// [mod] car colour extraction tool
+		{
+			extern int gColourDumpMode, gColourDumpSel;
+			extern char carNumLookup[4][10];
+			int city;
+
+			if (argc - i < 3)
+			{
+				printError("-dumpcolours <city> <carSelection>\n");
+				return -1;
+			}
+
+			city = atoi(argv[i + 1]);
+			gColourDumpSel = atoi(argv[i + 2]);
+			i += 2;
+
+			gColourDumpMode = 1;
+			wantedCar[0] = carNumLookup[city][gColourDumpSel];
+
+			// optional 4th arg: palette to request (tests the menu colour choice)
+			if (argc - i > 1 && argv[i + 1][0] != '-')
+			{
+				extern int gWantedPalette[2];
+				gWantedPalette[0] = atoi(argv[i + 1]);
+				i++;
+			}
+
+			SetFEDrawMode();
+			gInFrontend = 0;
+			AttractMode = 0;
+
+			gCurrentMissionNumber = 50 + city * 2;
+			GameType = GAME_TAKEADRIVE;
+			SetState(STATE_GAMELAUNCH);
+		}
 		else if (!strcmp(argv[i], "-replay"))
 		{
 			if (argc - i < 2)
@@ -2251,6 +2344,11 @@ void RenderGame2(int view)
 
 	if (gLoadedMotionCapture != 0)
 		DrawAllPedestrians();
+
+	{
+		extern void Pistol_Draw(void);	// [mod] muzzle flash
+		Pistol_Draw();
+	}
 
 	// do a lot of stuff
 	DisplayMissionTitle();

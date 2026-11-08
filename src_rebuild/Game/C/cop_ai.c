@@ -875,7 +875,8 @@ void ControlCopDetection(void)
 
 #if ENABLE_GAME_ENCHANCEMENTS
 	// [A] if Tanner is outside car, cops can arrest him if they are too close
-	if(player[0].playerType == 2 && minDistanceToPlayer < 2048 && !player[0].dying && pedestrianFelony > FELONY_PURSUIT_MIN_VALUE)
+	extern int gPistolDrawn;	// [mod] no arrest while the pistol is out
+	if(player[0].playerType == 2 && minDistanceToPlayer < 2048 && !player[0].dying && pedestrianFelony > FELONY_PURSUIT_MIN_VALUE && !gPistolDrawn)
 	{
 		player[0].dying = 1;
 		

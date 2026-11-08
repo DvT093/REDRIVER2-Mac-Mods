@@ -115,6 +115,7 @@ MATRIX2 matrixtable[64];
 int setupYet = 0;
 
 int gDrawDistance = PVS_CELL_COUNT * PVS_CELL_COUNT;
+int gViewCells = PVS_CELL_COUNT;	// [mod] view radius in cells (Manhattan); config [game] viewCells, env REDRIVER2_VIEW_CELLS
 
 #ifndef PSX
 struct DrawMapDiagStats
@@ -1487,12 +1488,29 @@ void DrawMapPSX(int* comp_val)
 	else
 		distScale = goFaster & 31;
 
+	// [mod] configurable view radius: the spiral must walk enough cells to cover it
+	{
+		static int envChecked = 0;
+		if (!envChecked)
+		{
+			const char* v = getenv("REDRIVER2_VIEW_CELLS");
+			if (v && atoi(v) > 0)
+				gViewCells = atoi(v);
+			if (gViewCells < 11) gViewCells = 11;
+			if (gViewCells > 64) gViewCells = 64;
+			envChecked = 1;
+		}
+	}
+
 	i = (gDrawDistance >> distScale);		// [A]
+
+	if (gViewCells > PVS_CELL_COUNT && i < (2 * gViewCells + 1) * (2 * gViewCells + 1))
+		i = (2 * gViewCells + 1) * (2 * gViewCells + 1);
 
 	// walk through all cells
 	do
 	{
-		if (ABS(hloop) + ABS(vloop) < PVS_CELL_COUNT)
+		if (ABS(hloop) + ABS(vloop) < gViewCells)
 		{
 #ifndef PSX
 			diag.cells_tested++;

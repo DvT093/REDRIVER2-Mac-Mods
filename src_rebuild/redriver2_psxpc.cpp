@@ -582,6 +582,10 @@ int main(int argc, char** argv)
 
 		// configure host game
 		ini_sget(config, "game", "drawDistance", "%d", &gDrawDistance);
+		{
+			extern int gViewCells;	// [mod]
+			ini_sget(config, "game", "viewCells", "%d", &gViewCells);
+		}
 #ifdef DYNAMIC_LIGHTING
 		ini_sget(config, "game", "dynamicLights", "%d", &gEnableDlights);
 #endif

@@ -4,6 +4,7 @@
 extern void StoreGameFlags(); // 0x0001BBB8
 extern int TannerCanEnterCar(CAR_DATA *cp, int distToCarSq); // 0x0001BBE8
 extern int TannerStuckInCar(int doSpeedCheck, int player_id); // 0x0001BA90
+extern int TannerCanLeaveCarMod(int player_id);
 
 
 #endif

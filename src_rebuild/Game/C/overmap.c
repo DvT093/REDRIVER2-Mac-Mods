@@ -15,6 +15,11 @@
 #include "camera.h"
 #include "felony.h"
 #include "pad.h"
+#include "waypoint.h"
+void SecretCar_DrawFullscreen(void);
+void SecretCar_DrawOverhead(void);
+void GpsRoute_DrawOverhead(void);
+void GpsRoute_DrawFullscreen(void);
 #include "ASM/rnc_2.h"
 
 struct MAPTEX
@@ -79,6 +84,8 @@ static int x_map = 0;
 static int y_map = 0;
 
 static int map_x_offset = 0;
+int gMapCursorX = 160;	// [mod] GPS cursor on the fullscreen map
+int gMapCursorY = 128;
 static int map_z_offset = 0;
 int map_x_shift = 0;
 int map_z_shift = 0;
@@ -1200,6 +1207,9 @@ void DrawOverheadMap(void)
 	DrawCompass();
 
 	DrawOverheadTargets();
+	GpsRoute_DrawOverhead();
+	Waypoint_DrawOverhead();
+	SecretCar_DrawOverhead();
 
 	// draw cop sight
 	cp = car_data;
@@ -1565,6 +1575,9 @@ void DrawFullscreenMap(void)
 
 		map_x_shift = 0;
 		map_z_shift = 0;
+
+		gMapCursorX = 160;	// [mod]
+		gMapCursorY = 128;
 	}
 	else
 	{
@@ -1592,34 +1605,44 @@ void DrawFullscreenMap(void)
 			map_z_offset = (player_position.vz + 128) - height;
 		}
 
+		// [mod] map scrolls first; when it can't scroll further the GPS cursor moves instead,
+		// and a cursor away from the centre returns to it before the map scrolls back.
 		if (Pads[0].direct & 0x8000)
 		{
-			if (player_position.vx - map_x_offset - 160 - map_x_shift > 0) 
-			{
+			if (gMapCursorX > 160)
+				gMapCursorX -= 8;
+			else if (player_position.vx - map_x_offset - 160 - map_x_shift > 0) 
 				map_x_shift += 8;
-			}
+			else if (gMapCursorX > 8)
+				gMapCursorX -= 8;
 		}
 		else if(Pads[0].direct & 0x2000)
 		{
-			if (player_position.vx - map_x_offset + 160 - map_x_shift < width)
-			{
+			if (gMapCursorX < 160)
+				gMapCursorX += 8;
+			else if (player_position.vx - map_x_offset + 160 - map_x_shift < width)
 				map_x_shift -= 8;
-			}
+			else if (gMapCursorX < 312)
+				gMapCursorX += 8;
 		}
 
 		if (Pads[0].direct & 0x1000) 
 		{
-			if (player_position.vz - map_z_offset - 128 - map_z_shift > 0)
-			{
+			if (gMapCursorY > 128)
+				gMapCursorY -= 8;
+			else if (player_position.vz - map_z_offset - 128 - map_z_shift > 0)
 				map_z_shift += 8;
-			}
+			else if (gMapCursorY > 8)
+				gMapCursorY -= 8;
 		}
 		else if(Pads[0].direct & 0x4000)
 		{
-			if (player_position.vz - map_z_offset + 128 - map_z_shift < height)
-			{
+			if (gMapCursorY < 128)
+				gMapCursorY += 8;
+			else if (player_position.vz - map_z_offset + 128 - map_z_shift < height)
 				map_z_shift -= 8;
-			}
+			else if (gMapCursorY < 248)
+				gMapCursorY += 8;
 		}
 
 		map_x_offset += map_x_shift;
@@ -1765,6 +1788,10 @@ void DrawFullscreenMap(void)
 	target.vz = 128;
 
 	DrawFullscreenTargets();
+	SecretCar_DrawFullscreen();
+	GpsRoute_DrawFullscreen();
+	Waypoint_DrawFullscreen();
+	Waypoint_FullscreenMapUpdate();
 
 	if (gUseRotatedMap)
 		DrawBigCompass(&target, player[0].dir);
@@ -1959,3 +1986,345 @@ void WorldToFullscreenMap2(VECTOR *in, VECTOR *out)
 
 
 
+
+// ---- REDRIVER2 mac mod: GPS waypoint ----
+
+
+int gWaypointSet = 0;
+VECTOR gWaypointPos = { 0 };
+int gWaypointLevel = -1;
+
+
+#define WAYPOINT_R 32
+#define WAYPOINT_G 96
+#define WAYPOINT_B 255
+
+// arrival radius in world units (Driver 2 uses 4096 per "unit"; cars are ~1000 long)
+#define WAYPOINT_ARRIVE_DIST 3000
+
+void Waypoint_Clear(void)
+{
+	gWaypointSet = 0;
+	gWaypointLevel = -1;
+}
+
+static int WaypointValid(void)
+{
+	if (!gWaypointSet)
+		return 0;
+
+	if (gWaypointLevel != GameLevel)
+	{
+		Waypoint_Clear();
+		return 0;
+	}
+
+	return 1;
+}
+
+// GPS cursor position on the fullscreen map -> world position
+static void FullscreenMapCentreToWorld(VECTOR* out)
+{
+	int ox, oz, mx, mz;
+	int scale;
+
+	// screen = R * (map - player_map) + (160,128) + offset
+	// cursor => map = player_map + R^T * (cursor - (160,128) - offset)
+	ox = gMapCursorX - 160 - map_x_offset;
+	oz = gMapCursorY - 128 - map_z_offset;
+
+	mx = player_position.vx + ((map_matrix.m[0][0] * ox + map_matrix.m[2][0] * oz) >> 12);
+	mz = player_position.vz + ((map_matrix.m[0][2] * ox + map_matrix.m[2][2] * oz) >> 12);
+
+	// inverse of WorldToFullscreenMap
+	scale = overlaidmaps[GameLevel].scale;
+
+	out->vx = (mx - overlaidmaps[GameLevel].x_offset - 49) * scale;
+	out->vy = 0;
+	out->vz = (overlaidmaps[GameLevel].y_offset + 49 - mz) * scale;
+}
+
+static void DrawCrosshair(void)
+{
+	TILE* t;
+	int i;
+
+	for (i = 0; i < 2; i++)
+	{
+		t = (TILE*)current->primptr;
+		setTile(t);
+
+		t->r0 = 255;
+		t->g0 = 255;
+		t->b0 = 255;
+
+		if (i == 0)
+		{
+			t->x0 = gMapCursorX - 6; t->y0 = gMapCursorY;
+			t->w = 13; t->h = 1;
+		}
+		else
+		{
+			t->x0 = gMapCursorX; t->y0 = gMapCursorY - 6;
+			t->w = 1; t->h = 13;
+		}
+
+		DrawPrim(t);
+	}
+}
+
+void Waypoint_FullscreenMapUpdate(void)
+{
+	VECTOR pos;
+
+	DrawCrosshair();
+
+	// Square (keyboard: Q in menus) sets / moves the waypoint; pressing it again
+	// with the crosshair on the existing waypoint removes it.
+	if (Pads[0].dirnew & MPAD_SQUARE)
+	{
+		FullscreenMapCentreToWorld(&pos);
+
+		if (WaypointValid())
+		{
+			int dx = (pos.vx - gWaypointPos.vx);
+			int dz = (pos.vz - gWaypointPos.vz);
+			int near = overlaidmaps[GameLevel].scale * 6;
+
+			if (ABS(dx) < near && ABS(dz) < near)
+			{
+				Waypoint_Clear();
+				return;
+			}
+		}
+
+		gWaypointPos = pos;
+		gWaypointSet = 1;
+		gWaypointLevel = GameLevel;
+	}
+}
+
+void Waypoint_DrawFullscreen(void)
+{
+	if (!WaypointValid())
+		return;
+
+	DrawTargetBlip(&gWaypointPos, WAYPOINT_R, WAYPOINT_G, WAYPOINT_B, 0x14);
+}
+
+void Waypoint_DrawOverhead(void)
+{
+	int dx, dz;
+
+	if (!WaypointValid())
+		return;
+
+	dx = gWaypointPos.vx - player[0].pos[0];
+	dz = gWaypointPos.vz - player[0].pos[2];
+
+	if (ABS(dx) < WAYPOINT_ARRIVE_DIST && ABS(dz) < WAYPOINT_ARRIVE_DIST)
+	{
+		Waypoint_Clear();
+		return;
+	}
+
+	DrawTargetBlip(&gWaypointPos, WAYPOINT_R, WAYPOINT_G, WAYPOINT_B, 0x11);
+	DrawTargetArrow(&gWaypointPos, 1);
+}
+
+
+// ---- REDRIVER2 mac mod: secret car markers ----
+// Positions = the door/gate that opens for the secret car in each city (event.c):
+// Chicago chicagoDoor[0] "WRGFLDDOOR", Havana havanaFixed[2], Vegas vegasDoor[4] "GATE01", Rio rioDoor[4] "GATE03".
+static VECTOR gSecretCarPos[4] = {
+	{ -207616, 0, 659706, 0 },
+	{ -487936, 0, -136689, 0 },
+	{ 123936, 0, 4928, 0 },
+	{ -40432, 0, 383328, 0 },
+};
+
+// gold diamond; fullscreen = 1 draws immediately on the fullscreen map
+static void DrawSecretCarDiamond(int x, int y, int fullscreen)
+{
+	POLY_F4* poly;
+	int sz = fullscreen ? 6 : 4;
+	int i;
+
+	for (i = 0; i < 2; i++)
+	{
+		int s2 = (i == 0) ? sz + 1 : sz;	// dark outline first, gold on top
+
+		poly = (POLY_F4*)current->primptr;
+		setPolyF4(poly);
+
+		poly->x0 = x;      poly->y0 = y - s2;
+		poly->x1 = x + s2; poly->y1 = y;
+		poly->x2 = x - s2; poly->y2 = y;
+		poly->x3 = x;      poly->y3 = y + s2;
+
+		if (i == 0)
+		{
+			poly->r0 = 40; poly->g0 = 24; poly->b0 = 0;
+		}
+		else
+		{
+			poly->r0 = 255; poly->g0 = 200; poly->b0 = 0;
+		}
+
+		if (fullscreen)
+		{
+			DrawPrim(poly);
+		}
+		else
+		{
+			addPrim(current->ot + 1, poly);
+			current->primptr += sizeof(POLY_F4);
+		}
+	}
+}
+
+void SecretCar_DrawFullscreen(void)
+{
+	VECTOR vec;
+
+	if (GameType != GAME_TAKEADRIVE || GameLevel < 0 || GameLevel > 3)	// only in Take a Ride
+		return;
+
+	WorldToFullscreenMap2(&gSecretCarPos[GameLevel], &vec);
+	DrawSecretCarDiamond(vec.vx + map_x_offset, vec.vz + map_z_offset, 1);
+}
+
+void SecretCar_DrawOverhead(void)
+{
+	VECTOR vec;
+
+	if (GameType != GAME_TAKEADRIVE || GameLevel < 0 || GameLevel > 3)	// only in Take a Ride
+		return;
+
+	WorldToOverheadMapPositions(&gSecretCarPos[GameLevel], &vec, 1, 0, 0);
+
+	if (vec.vx <= gMapXOffset + 4 || vec.vx >= gMapXOffset + MAP_SIZE_W - 4 ||
+		vec.vz <= gMapYOffset + 4 || vec.vz >= gMapYOffset + MAP_SIZE_H - 4)
+		return;
+
+	DrawSecretCarDiamond(vec.vx, vec.vz, 0);
+}
+
+
+// ---- REDRIVER2 mac mod: GPS route drawing ----
+#include "gps_route.h"
+
+#define ROUTE_R 40
+#define ROUTE_G 140
+#define ROUTE_B 255
+
+// Cohen-Sutherland clip of a 2D segment to [x0,x1]x[y0,y1]
+static int ClipCode(int x, int y, int x0, int y0, int x1, int y1)
+{
+	int c = 0;
+	if (x < x0) c |= 1; else if (x > x1) c |= 2;
+	if (y < y0) c |= 4; else if (y > y1) c |= 8;
+	return c;
+}
+
+static int ClipSegment(int* ax, int* ay, int* bx, int* by, int x0, int y0, int x1, int y1)
+{
+	int ca = ClipCode(*ax, *ay, x0, y0, x1, y1);
+	int cb = ClipCode(*bx, *by, x0, y0, x1, y1);
+	int iter = 0;
+
+	while (iter++ < 8)
+	{
+		int c, x, y;
+
+		if (!(ca | cb)) return 1;
+		if (ca & cb) return 0;
+
+		c = ca ? ca : cb;
+
+		if (c & 8)      { x = *ax + (*bx - *ax) * (y1 - *ay) / ((*by - *ay) ? (*by - *ay) : 1); y = y1; }
+		else if (c & 4) { x = *ax + (*bx - *ax) * (y0 - *ay) / ((*by - *ay) ? (*by - *ay) : 1); y = y0; }
+		else if (c & 2) { y = *ay + (*by - *ay) * (x1 - *ax) / ((*bx - *ax) ? (*bx - *ax) : 1); x = x1; }
+		else            { y = *ay + (*by - *ay) * (x0 - *ax) / ((*bx - *ax) ? (*bx - *ax) : 1); x = x0; }
+
+		if (c == ca) { *ax = x; *ay = y; ca = ClipCode(x, y, x0, y0, x1, y1); }
+		else         { *bx = x; *by = y; cb = ClipCode(x, y, x0, y0, x1, y1); }
+	}
+
+	return 0;
+}
+
+static void RouteLine(int ax, int ay, int bx, int by, int fullscreen)
+{
+	int k;
+
+	// 2 px thick: draw twice, offset by one pixel
+	for (k = 0; k < 2; k++)
+	{
+		LINE_F2* line = (LINE_F2*)current->primptr;
+		setLineF2(line);
+
+		line->r0 = ROUTE_R; line->g0 = ROUTE_G; line->b0 = ROUTE_B;
+		line->x0 = ax + k; line->y0 = ay;
+		line->x1 = bx + k; line->y1 = by;
+
+		if (fullscreen)
+		{
+			DrawPrim(line);
+		}
+		else
+		{
+			addPrim(current->ot + 1, line);
+			current->primptr += sizeof(LINE_F2);
+		}
+	}
+}
+
+void GpsRoute_DrawOverhead(void)
+{
+	static VECTOR out[GPS_MAX_POINTS];
+	int i;
+
+	GpsRoute_Update();
+
+	if (gGpsRouteCount < 2)
+		return;
+
+	WorldToOverheadMapPositions(gGpsRoutePts, out, gGpsRouteCount, 0, 0);
+
+	for (i = 0; i < gGpsRouteCount - 1; i++)
+	{
+		int ax = out[i].vx, ay = out[i].vz, bx = out[i + 1].vx, by = out[i + 1].vz;
+
+		if (ClipSegment(&ax, &ay, &bx, &by, gMapXOffset + 1, gMapYOffset + 1, gMapXOffset + MAP_SIZE_W - 2, gMapYOffset + MAP_SIZE_H - 2))
+			RouteLine(ax, ay, bx, by, 0);
+	}
+}
+
+void GpsRoute_DrawFullscreen(void)
+{
+	int i;
+	VECTOR a, b;
+
+	GpsRoute_Update();
+
+	if (gGpsRouteCount < 2)
+		return;
+
+	WorldToFullscreenMap2(&gGpsRoutePts[0], &a);
+
+	for (i = 1; i < gGpsRouteCount; i++)
+	{
+		int ax, ay, bx, by;
+
+		WorldToFullscreenMap2(&gGpsRoutePts[i], &b);
+
+		ax = a.vx + map_x_offset; ay = a.vz + map_z_offset;
+		bx = b.vx + map_x_offset; by = b.vz + map_z_offset;
+
+		if (ClipSegment(&ax, &ay, &bx, &by, 0, 0, 319, 255))
+			RouteLine(ax, ay, bx, by, 1);
+
+		a = b;
+	}
+}

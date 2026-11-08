@@ -1132,6 +1132,19 @@ void newShowTanner(LPPEDESTRIAN pDrawingPed)
 		}
 	}
 
+	// [mod] pistol in Tanner's right hand
+	if (!bDoingShadow && draw && pDrawingPed == player[0].pPed)
+	{
+		extern void Pistol_DrawHeld(SVECTOR* jHand, SVECTOR* jElbow, VECTOR* base);
+		VECTOR base;
+
+		base.vx = playerPos->vx - cameraPos->vx;
+		base.vy = playerPos->vy - cameraPos->vy;
+		base.vz = playerPos->vz - cameraPos->vz;
+
+		Pistol_DrawHeld(&vJPos[RHAND], &vJPos[RELBOW], &base);
+	}
+
 	if(bDoingShadow || draw)
 	{
 		if (pDrawingPed->pedType < OTHER_SPRITE)
@@ -1330,6 +1343,21 @@ void newRotateBones(LPPEDESTRIAN pDrawingPed, BONE* poBone)
 	_svBone[0].vx = Skel[0].vOffset.vx;
 	_svBone[0].vy = Skel[0].vOffset.vy;
 	_svBone[0].vz = Skel[0].vOffset.vz;
+
+	// [mod] pistol aim pose: override the right arm joint rotations
+	{
+		extern int gPistolDrawn;
+		extern SVECTOR gAimRot[3];	// RSHOULDER, RELBOW, RHAND
+		extern int gModTestMode;
+		static int dbg = 0;
+
+		if (gPistolDrawn && pDrawingPed == player[0].pPed && pDrawingPed->pedType == TANNER_MODEL)
+		{
+			Skel[RSHOULDER].pvRotation = &gAimRot[0];
+			Skel[RELBOW].pvRotation = &gAimRot[1];
+			Skel[RHAND].pvRotation = &gAimRot[2];
+		}
+	}
 
 	mStore[0] = _pMatrix;
 

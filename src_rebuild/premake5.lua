@@ -212,7 +212,7 @@ workspace "REDRIVER2"
 			"-fpermissive",
 			-- Force-include types.h so its u_long override (uint32_t) wins over
 			-- macOS <sys/types.h> which would otherwise typedef u_long as 64-bit.
-			"-include " .. path.getabsolute("PsyCross/include/psx/types.h"),
+			"-include \"" .. path.getabsolute("PsyCross/include/psx/types.h") .. "\"",
 		}
 
 		cppdialect "C++11"

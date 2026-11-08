@@ -374,6 +374,14 @@ void SetupResidentModels()
 			// force palette
 			if (singlePal)
 				PlayerStartInfo[i]->palette = 0;
+
+			// [mod] colour picked in the car select menu
+			{
+				extern int gWantedPalette[2];
+
+				if (!singlePal && gWantedPalette[i] >= 0)
+					PlayerStartInfo[i]->palette = gWantedPalette[i];
+			}
 		}
 	}
 }

@@ -1105,6 +1105,58 @@ void CheckCarToCarCollisions(void)
 }
 
 // [D] [T]
+// ---- REDRIVER2 mac mod: speed limiter ----
+// Keyboard L toggles. While on, the throttle is cut just below the speed at which
+// the police note "Speeding" on the current road (same maths as felony.c).
+#ifndef PSX
+#include <SDL.h>
+#endif
+#include "civ_ai.h"
+
+int gSpeedLimiterOn = 0;
+int gLeaveCarDedicated = 0;
+
+static void SpeedLimiter_Toggle(void)
+{
+#ifndef PSX
+	static int prevDown = 0;
+	const Uint8* ks = SDL_GetKeyboardState(NULL);
+	int down = ks && ks[SDL_SCANCODE_L];
+
+	if (down && !prevDown)
+	{
+		gSpeedLimiterOn ^= 1;
+		SetPlayerMessage(0, (char*)(gSpeedLimiterOn ? "Speed limiter ON" : "Speed limiter OFF"), 2, 2);
+	}
+
+	prevDown = down;
+#endif
+}
+
+static int SpeedLimiter_Limit(CAR_DATA* cp)
+{
+	DRIVER2_ROAD_INFO roadInfo;
+	VECTOR pos;
+	int maxSpeed, limit;
+
+	pos.vx = cp->hd.where.t[0];
+	pos.vy = cp->hd.where.t[1];
+	pos.vz = cp->hd.where.t[2];
+
+	if (GetSurfaceRoadInfo(&roadInfo, GetSurfaceIndex(&pos)))
+		maxSpeed = speedLimits[ROAD_SPEED_LIMIT(&roadInfo)];
+	else
+		maxSpeed = speedLimits[2];
+
+	// police threshold (felony.c)
+	if (speedLimits[2] == maxSpeed)
+		limit = (maxSpeed * 19) >> 4;
+	else
+		limit = (maxSpeed * 3) >> 1;
+
+	return limit - 3;	// stay just under it
+}
+
 void ProcessCarPad(CAR_DATA* cp, u_int pad, char PadSteer, char use_analogue)
 {
 	int player_id;
@@ -1123,7 +1175,11 @@ void ProcessCarPad(CAR_DATA* cp, u_int pad, char PadSteer, char use_analogue)
 		// handle car leaving
 		if ((pad & CAR_PAD_LEAVECAR) == CAR_PAD_LEAVECAR && player_id > -1)
 		{
-			if (!TannerStuckInCar(1, player_id))
+			extern int gLeaveCarDedicated;
+
+			// [mod] Enter (dedicated exit button): leave while moving and during pursuit.
+			// Up + Triangle (= gas + handbrake on the keyboard) keeps the original rule (only when stopped).
+			if (gLeaveCarDedicated ? TannerCanLeaveCarMod(player_id) : !TannerStuckInCar(1, player_id))
 			{
 				if (player[player_id].dying == 0)
 				{
@@ -1138,6 +1194,17 @@ void ProcessCarPad(CAR_DATA* cp, u_int pad, char PadSteer, char use_analogue)
 				// this is to show message
 				gLockPickingAttempted = 1;
 			}
+		}
+
+		// [mod] speed limiter
+		SpeedLimiter_Toggle();
+
+		if (gSpeedLimiterOn && (pad & CAR_PAD_ACCEL))
+		{
+			int speed = FIXEDH(cp->hd.wheel_speed);
+
+			if (speed > 0 && speed >= SpeedLimiter_Limit(cp))
+				pad &= ~CAR_PAD_ACCEL;
 		}
 
 		// Lock car if it has mission lock or fully damaged

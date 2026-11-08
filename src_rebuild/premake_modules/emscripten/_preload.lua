@@ -19,7 +19,7 @@
 
 	api.addAllowed("system", { p.EMSCRIPTEN })
 	api.addAllowed("kind", "HTMLPage")
-	api.addAllowed("flags", {
+	pcall(api.addAllowed, "flags", {
 		"NoClosureCompiler",
 		"NoMinifyJavaScript",
 		"NoMemoryInitFile",
