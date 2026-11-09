@@ -1,4 +1,5 @@
 #include "driver2.h"
+#include "pause.h"
 #include "overmap.h"
 #include "texture.h"
 #include "cars.h"
@@ -1172,7 +1173,8 @@ void DrawOverheadMap(void)
 		
 		if (flashtimer)
 		{
-			flashtimer--;
+			if (!gInterpFrame)	// [mod] 60 fps
+				flashtimer--;
 			intens = -flashtimer;
 
 			intens = ptab2[intens + 47 >> 2] + ptab2[intens + 48 >> 2] + ptab2[intens + 49 >> 2] + ptab2[intens + 50 >> 2] >> 2;

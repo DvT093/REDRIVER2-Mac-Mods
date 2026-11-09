@@ -1749,7 +1749,7 @@ void DrawPauseMenus(void)
 		{
 			DisplayMenuMessage(gDisplayedMessage.header, gDisplayedMessage.text);
 
-			if(gDisplayedMessage.show > 0)
+			if(gDisplayedMessage.show > 0 && !gInterpFrame)	// [mod] 60 fps
 				gDisplayedMessage.show--;
 		}
 		else if (gEnteringScore)

@@ -1,4 +1,6 @@
 #include "driver2.h"
+#include <time.h>
+#include <unistd.h>
 #include "main.h"
 
 #include "ASM/rndrasm.h"
@@ -771,6 +773,7 @@ void State_GameInit(void* param)
 
 	cameraview = 0;
 	FrameCnt = 0;
+	{ extern int gRenderCnt; gRenderCnt = 0; }	// [mod] 60 fps: keep buffer parity
 	NoTextureMemory = 0;
 	WantPause = 0;
 	gDrawPauseMenus = 0;
@@ -804,8 +807,9 @@ void State_GameInit(void* param)
 	SetState(STATE_GAMELOOP);
 
 #ifndef PSX
-	// set to 30 FPS VSync
-	PsyX_SetSwapInterval(2);
+	// set to 30 FPS VSync ([mod] 60 fps mode: every refresh)
+	extern int Interp_Active(void);
+	PsyX_SetSwapInterval(Interp_Active() ? 1 : 2);
 	PsyX_EnableSwapInterval(1);
 #endif
 }
@@ -1288,6 +1292,12 @@ int FilterFrameTime()
 {
 	static int frame = 0;
 
+	// [diag] REDRIVER2_NO_LIMIT=1: no 30 fps cap (game runs too fast; only to measure frame cost)
+	static int noLimit = -1;
+	if (noLimit < 0) noLimit = getenv("REDRIVER2_NO_LIMIT") != NULL;
+	if (noLimit)
+		return 1;
+
 	// always stay 30 FPS (2 vblanks)
 	if (VSync(-1) - frame < 2)
 		return 0;
@@ -1561,6 +1571,119 @@ void CheckForPause(void)
 
 int gMultiStep = 0;
 
+// [mod] 60 fps: one sim step (what State_GameLoop did per frame before drawing)
+static void GameLoop_SimStep(void)
+{
+	int cnt;
+
+	UpdatePadData();
+	CheckForPause();
+
+	{
+		extern void ColourDump_Frame(void);	// [mod]
+		extern void ModTest_Frame(void);
+		extern void Traffic_Update(void);	// [mod] dynamic traffic
+		extern void Pistol_CarFrame(void);	// [mod] shooting from the car
+		ColourDump_Frame();
+		ModTest_Frame();
+		Traffic_Update();
+		Pistol_CarFrame();
+	}
+
+	if (FrameCnt == 5)
+		SetDispMask(1);
+
+	cnt = FastForward ? 7 : 1;
+	while (--cnt >= 0)
+		StepGame();
+}
+
+// [mod] 60 fps: fixed 30 Hz sim steps on the real clock, a draw every screen refresh in between.
+static void State_GameLoop60(void)
+{
+	extern void Interp_BeforeStep(void);
+	extern void Interp_AfterCamera(void);
+	extern void Interp_Apply(int t);
+	extern void Interp_Restore(void);
+	extern int Interp_ExtraFramesAllowed(void);
+	extern int gInterpFrame;
+	extern void DoFreeCamera();
+
+	const double STEP_MS = 1000.0 / 30.0;
+	static double last = 0, acc = 0;
+	struct timespec ts;
+	double now;
+	int stepped = 0;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	now = ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6;
+
+	if (last == 0 || now - last > 250)	// first frame or after a long stall (loading)
+	{
+		last = now - STEP_MS;
+		acc = 0;
+	}
+
+	// never faster than ~60 fps (vsync normally paces us at the screen refresh)
+	if (now - last < 15.0)
+	{
+		usleep(1000);
+		return;
+	}
+
+	acc += now - last;
+	last = now;
+
+	if (acc > STEP_MS * 3)
+		acc = STEP_MS * 3;
+
+	while (acc >= STEP_MS && stepped < 3)
+	{
+		Interp_BeforeStep();
+		GameLoop_SimStep();
+
+		// camera once per step (was at the start of every draw)
+		CurrentPlayerView = 0;
+		InitCamera(&player[0]);
+		DoFreeCamera();
+		Interp_AfterCamera();
+
+		acc -= STEP_MS;
+		stepped++;
+	}
+
+	if (!stepped && !Interp_ExtraFramesAllowed())
+		return;	// menus, map, fast forward: 30 fps as before
+
+	gInterpFrame = stepped ? 0 : 1;
+
+	if (Interp_ExtraFramesAllowed())
+		Interp_Apply((int)(acc / STEP_MS * 4096.0));
+
+	_CutRec_Draw();
+	DrawGame();
+
+	{	// [diag] REDRIVER2_FPS_LOG=1: draws and sim steps per second
+		static int on = -1, draws = 0, steps = 0, extra = 0; static double t0 = 0;
+		if (on < 0) on = getenv("REDRIVER2_FPS_LOG") != NULL;
+		if (on)
+		{
+			draws++; steps += stepped; extra += !stepped;
+			if (t0 == 0) t0 = now;
+			if (now - t0 >= 2000) { printf("FPS60 draws/s=%.1f steps/s=%.1f extra=%d\n", draws * 1000.0 / (now - t0), steps * 1000.0 / (now - t0), extra); fflush(stdout); draws = steps = extra = 0; t0 = now; }
+		}
+	}
+
+	Interp_Restore();
+	gInterpFrame = 0;
+
+	if (game_over)
+		SetState(STATE_GAMECOMPLETE);
+
+	if (stepped)
+		_CutRec_Step();
+}
+
 // [D] [T]
 void State_GameLoop(void* param)
 {
@@ -1572,6 +1695,15 @@ void State_GameLoop(void* param)
 		ClearCurrentDrawBuffers();
 		return;
 	}
+
+#ifndef PSX
+	extern int Interp_Active(void);
+	if (Interp_Active())
+	{
+		State_GameLoop60();	// [mod] 60 fps
+		return;
+	}
+#endif
 
 	if (!FilterFrameTime())
 		return;
@@ -1639,9 +1771,12 @@ int ObjectDrawnValue = 0;
 // [D] [T]
 void DrawGame(void)
 {
+	extern int gRenderCnt;
+	extern int gInterpFrame;
+
 	if (NumPlayers == 1 || NoPlayerControl)
 	{
-		ObjectDrawnValue = FrameCnt;
+		ObjectDrawnValue = gRenderCnt << 5;	// [mod] 60 fps: per draw (cached object matrices follow the camera)
 		DrawPauseMenus();
 
 		RenderGame2(0);
@@ -1666,7 +1801,9 @@ void DrawGame(void)
 		PsyX_EndScene();
 #endif
 
-	FrameCnt++;
+	gRenderCnt++;
+	if (!gInterpFrame)	// [mod] 60 fps: FrameCnt stays a sim counter
+		FrameCnt++;
 }
 
 
@@ -2359,7 +2496,12 @@ void RenderGame2(int view)
 	int notInDreaAndStevesEvilLair;
 
 	CurrentPlayerView = view;
-	InitCamera(&player[view]);
+
+	extern int Interp_Active(void);
+	int camInStep = Interp_Active();	// [mod] 60 fps: camera is set once per sim step in State_GameLoop60
+
+	if (!camInStep)
+		InitCamera(&player[view]);
 
 #ifndef PSX
 	int screenW, screenH;
@@ -2370,7 +2512,8 @@ void RenderGame2(int view)
 	FrAng = ratan2(160, float(scr_z) * aspectVar * 1.35f);
 
 	extern void DoFreeCamera();
-	DoFreeCamera();
+	if (!camInStep)
+		DoFreeCamera();
 #else
 	FrAng = ratan2(160, scr_z);
 #endif
@@ -2577,6 +2720,7 @@ void InitGameVariables(void)
 	srand(0x1234);
 	RandomInit(0xd431, 0x350b1);
 	FrameCnt = 0;
+	{ extern int gRenderCnt; gRenderCnt = 0; }	// [mod] 60 fps: keep buffer parity
 	CameraCnt = 0;
 
 	ClearMem((char*)&lightsOnDelay, sizeof(lightsOnDelay));

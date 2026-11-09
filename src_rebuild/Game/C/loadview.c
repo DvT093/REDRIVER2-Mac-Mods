@@ -431,7 +431,7 @@ void DisplayMissionTitle(void)
 		bMissionTitleFade = CameraCnt;
 	}
 
-	if (bMissionTitleFade && !pauseflag) 
+	if (bMissionTitleFade && !FX_FROZEN) 
 	{
 		fadeVal -= 6;
 

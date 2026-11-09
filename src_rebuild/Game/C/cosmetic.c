@@ -182,7 +182,7 @@ void AddIndicatorLight(CAR_DATA *cp, int Type)
 	col.g = 0;
 	col.b = 0;
 
-	if (pauseflag == 0)
+	if (!FX_FROZEN)
 		*life += 8;
 
 	car_cos = cp->ap.carCos;
@@ -417,7 +417,7 @@ void AddCopCarLight(CAR_DATA *cp)
 			if (gNight != 0)
 				col.g = 50;
 
-			if (pauseflag == 0 && (CameraCnt & 1U) != 0 && GameLevel == 2) 
+			if (!FX_FROZEN && (CameraCnt & 1U) != 0 && GameLevel == 2) 
 				pos++;
 
 			v1.vz = car_cos->policeLight.vz + car_cos->cog.vz;
@@ -436,12 +436,12 @@ void AddCopCarLight(CAR_DATA *cp)
 				col.b = col.g;
 			}
 
-			if (pauseflag == 0) 
+			if (!FX_FROZEN) 
 				cp->ap.coplife += count_speed;
 
 			ShowCarlight(&v1, cp, &col, size, size*3, &light_texture, 0xff);
 
-			if (pauseflag == 0 && (CameraCnt & 1U) != 0 && GameLevel == 2) 
+			if (!FX_FROZEN && (CameraCnt & 1U) != 0 && GameLevel == 2) 
 				pos++;
 
 			pos = pos & 7;
@@ -671,7 +671,7 @@ void AddSmokingEngine(CAR_DATA *cp, int black_smoke, int WheelSpeed)
 	VECTOR Drift;
 	SVECTOR svec;
 
-	if((CameraCnt & 3U) == (CAR_INDEX(cp) & 3U) && pauseflag == 0)
+	if((CameraCnt & 3U) == (CAR_INDEX(cp) & 3U) && !FX_FROZEN)
 	{
 		car_cos = cp->ap.carCos;
 
@@ -715,7 +715,7 @@ void AddExhaustSmoke(CAR_DATA *cp, int black_smoke, int WheelSpeed)
 	if (WheelSpeed > 512 * 64)
 		return;
 
-	if ((CameraCnt & 3U) == (CAR_INDEX(cp) & 3U) && pauseflag == 0)
+	if ((CameraCnt & 3U) == (CAR_INDEX(cp) & 3U) && !FX_FROZEN)
 	{
 		car_cos = cp->ap.carCos;
 
@@ -757,7 +757,7 @@ void AddFlamingEngine(CAR_DATA *cp)
 	SVECTOR svec;
 	VECTOR Drift;
 
-	if ((CameraCnt & 1U) == (CAR_INDEX(cp) & 1U) && pauseflag == 0)
+	if ((CameraCnt & 1U) == (CAR_INDEX(cp) & 1U) && !FX_FROZEN)
 	{
 		car_cos = cp->ap.carCos;
 

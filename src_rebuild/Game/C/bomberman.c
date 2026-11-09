@@ -1,4 +1,5 @@
 #include "driver2.h"
+#include "pause.h"
 #include "bomberman.h"
 #include "convert.h"
 #include "overmap.h"
@@ -94,7 +95,8 @@ void DrawThrownBombs(void)
 	{
 		add_haze(flashval, flashval, 7);
 
-		flashval -= 10;
+		if (!FX_FROZEN)	// [mod] 60 fps
+			flashval -= 10;
 
 		if (flashval < 1)
 			gWantFlash = 0;

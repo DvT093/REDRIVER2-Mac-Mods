@@ -337,7 +337,7 @@ void MoveHubcap()
 
 	InitMatrix(Orientation);
 
-	if (pauseflag == 0)
+	if (!FX_FROZEN)
 	{
 		if(gHubcapTime > 0)
 			gHubcapTime--;
@@ -346,7 +346,7 @@ void MoveHubcap()
 	// draw current hubcap
 	if (gHubcap.Duration > 0) 
 	{
-		if (pauseflag == 0 && CurrentPlayerView == 0)
+		if (!FX_FROZEN && CurrentPlayerView == 0)
 		{
 			gHubcap.Duration--;
 

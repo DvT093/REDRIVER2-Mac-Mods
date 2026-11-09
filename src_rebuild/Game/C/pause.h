@@ -16,6 +16,8 @@ enum EXIT_VALUE
 extern int gShowMap;
 extern int gDrawPauseMenus;
 extern int pauseflag;
+extern int gInterpFrame;	// [mod] 60 fps: 1 = extra frame between sim steps (effects frozen)
+#define FX_FROZEN (pauseflag || gInterpFrame)
 extern int gMissionCompletionState;
 
 extern int UpdatePauseMenu(PAUSEMODE mode);

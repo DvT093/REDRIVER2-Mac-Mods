@@ -1,4 +1,5 @@
 #include "driver2.h"
+#include "pause.h"
 #include "players.h"
 #include "pedest.h"
 #include "cars.h"
@@ -788,10 +789,13 @@ void Pistol_DrawHeld(SVECTOR* jHand, SVECTOR* jElbow, VECTOR* base)
 		m.vy = hand.vy + uy * 26 / 4096;
 		m.vz = hand.vz + uz * 26 / 4096;
 
-		g_lastMuzzle.vx = m.vx + camera_position.vx;
-		g_lastMuzzle.vy = m.vy + camera_position.vy;
-		g_lastMuzzle.vz = m.vz + camera_position.vz;
-		g_haveMuzzle = 1;
+		if (!gInterpFrame)	// [mod] 60 fps: muzzle point from the real sim frame
+		{
+			g_lastMuzzle.vx = m.vx + camera_position.vx;
+			g_lastMuzzle.vy = m.vy + camera_position.vy;
+			g_lastMuzzle.vz = m.vz + camera_position.vz;
+			g_haveMuzzle = 1;
+		}
 
 		if (g_tracerFrames > 0)
 		{
@@ -801,13 +805,13 @@ void Pistol_DrawHeld(SVECTOR* jHand, SVECTOR* jElbow, VECTOR* base)
 			e.vz = g_tracerEnd.vz - camera_position.vz;
 
 			DrawTracer(&m, &e);
-			g_tracerFrames--;
+			if (!gInterpFrame) g_tracerFrames--;	// [mod] 60 fps
 		}
 
 		if (g_flashFrames > 0)
 		{
 			DrawMuzzleFlash(&m, ux, uy, uz, px, py, pz, qx, qy, qz);
-			g_flashFrames--;
+			if (!gInterpFrame) g_flashFrames--;	// [mod] 60 fps
 		}
 	}
 
@@ -969,7 +973,7 @@ void Pistol_CarDraw(void)
 	if (g_carArmFrames <= 0 || player[0].playerType != 1)
 		return;
 
-	g_carArmFrames--;
+	if (!gInterpFrame) g_carArmFrames--;	// [mod] 60 fps
 
 	gte_ReadRotMatrix(&savedGte);
 
@@ -1019,13 +1023,13 @@ void Pistol_CarDraw(void)
 		e.vz = g_tracerEnd.vz - camera_position.vz;
 
 		DrawTracer(&m, &e);
-		g_tracerFrames--;
+		if (!gInterpFrame) g_tracerFrames--;	// [mod] 60 fps
 	}
 
 	if (g_flashFrames > 0)
 	{
 		DrawMuzzleFlash(&m, ux, uy, uz, px, py, pz, qx, qy, qz);
-		g_flashFrames--;
+		if (!gInterpFrame) g_flashFrames--;	// [mod] 60 fps
 	}
 
 	gte_SetRotMatrix(&savedGte);

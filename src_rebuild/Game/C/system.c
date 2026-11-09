@@ -646,7 +646,8 @@ void SwapDrawBuffers(void)
 	PutDrawEnv(&current->draw);
 	DrawOTag((u_long*)(current->ot + OTSIZE-1));
 
-	if ((FrameCnt & 1) != 0)
+	extern int gRenderCnt;
+	if ((gRenderCnt & 1) != 0)	// [mod] 60 fps: alternate per draw, not per sim step
 	{
 		current = &MPBuff[0][0];
 		last = &MPBuff[0][1];

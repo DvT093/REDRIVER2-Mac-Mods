@@ -769,7 +769,7 @@ void SwirlLeaves(CAR_DATA *cp)
 	plpos.vy = cp->hd.where.t[1];
 	plpos.vz = cp->hd.where.t[2];
 
-	if (cp->hd.wheel_speed + 39999U <= 0x1d4be || gDoLeaves == 0 || pauseflag != 0)
+	if (cp->hd.wheel_speed + 39999U <= 0x1d4be || gDoLeaves == 0 || FX_FROZEN)
 		return;
 
 	for (count = 0; count < MAX_LEAVES; count++)
@@ -994,6 +994,9 @@ void ReleaseSmoke(short num)
 // [D] [T]
 void AddGroundDebris(void)
 {
+	if (gInterpFrame)	// [mod] 60 fps: spawn leaves once per sim step
+		return;
+
 	int seed;
 	int number;
 	int zbound;
@@ -1245,10 +1248,14 @@ int find_lamp_streak(int LampId)
 	{
 		if (Known_Lamps[count].id == LampId)
 		{
-			Known_Lamps[count].set = 1;
+			if (!gInterpFrame)	// [mod] 60 fps
+				Known_Lamps[count].set = 1;
 			return count;
 		}
 	}
+
+	if (gInterpFrame)	// [mod] 60 fps: allocate new streaks once per sim step
+		return -1;
 
 	// allocate new streak
 	if (StreakCount1 < MAX_LAMP_STREAKS)
@@ -2177,7 +2184,8 @@ void ShowLight(VECTOR *v1, CVECTOR *col, short size, TEXTURE_DETAILS *texture)
 		}
 	}
 
-	*clock = FrameCnt;
+	if (!gInterpFrame)	// [mod] 60 fps: keep the trail clock per sim step
+		*clock = FrameCnt;
 }
 
 // [D] [T]
@@ -2771,7 +2779,7 @@ void Setup_Sparks(VECTOR *ipos, VECTOR *ispeed, int num_sparks, char SparkType)
 
 	SMOKE *mysmoke;
 
-	if (pauseflag != 0 || 0 >= num_sparks)
+	if (FX_FROZEN || 0 >= num_sparks)
 		return;
 
 	for (i = 0; i < num_sparks; i++)
@@ -3149,7 +3157,7 @@ void HandleDebris(void)
 		{
 			DisplayDebris(db, 0);
 			
-			if (pauseflag == 0)
+			if (!FX_FROZEN)
 			{
 				if (--db->life == 0 || db->position.vy > 0) 
 				{
@@ -3184,7 +3192,7 @@ void HandleDebris(void)
 		{
 			DisplayDebris((DEBRIS *)lf, lf->type);
 			
-			if (pauseflag == 0)
+			if (!FX_FROZEN)
 			{
 				if (lf->life == 1) 
 				{
@@ -3257,7 +3265,7 @@ void HandleDebris(void)
 			}
 		}
 
-		if (sm->flags & 0x2 && pauseflag == 0)
+		if (sm->flags & 0x2 && !FX_FROZEN)
 		{
 			if (sm->flags & 0x8000) 
 			{
@@ -3333,7 +3341,7 @@ void HandleDebris(void)
 		}
 	}
 
-	if (pauseflag == 0)
+	if (!FX_FROZEN)
 	{
 		main_cop_light_pos++;
 		main_cop_light_pos &= 7;
@@ -3450,7 +3458,7 @@ void DisplaySplashes(void)
 	int ang;
 	int SplashNo, SplashFrac;
 
-	if (pauseflag != 0)
+	if (FX_FROZEN)
 		return;
 
 	SplashNo = gRainCount >> 1;
@@ -3551,7 +3559,7 @@ void DrawRainDrops(void)
 		v.vy = RainPtr->position.vy - camera_position.vy;
 		v.vz = RainPtr->position.vz - camera_position.vz;
 
-		if (pauseflag) 
+		if (FX_FROZEN) 
 		{
 			// [A] old position imitation
 			// works effectively when player not moving
@@ -3611,7 +3619,7 @@ void DrawRainDrops(void)
 			else
 				*(u_int *)&RainPtr->oldposition = *(u_int *)&poly->x2;
 		}
-		else if (pauseflag == 0)
+		else if (!FX_FROZEN)
 		{
 			ReleaseRainDrop(RainPtr->oldposition.pad);
 		}
@@ -3641,7 +3649,7 @@ void AddRainDrops(void)
 	count = gRainCount;
 	first = 1;
 
-	if (pauseflag != 0 || NoRainIndoors != 0)
+	if (FX_FROZEN || NoRainIndoors != 0)
 		return;
 
 	wetness += count / 6;
@@ -3715,7 +3723,7 @@ static int ThunderDistance = 0;
 // [D] [T]
 void DoLightning(void)
 {
-	if (pauseflag != 0)
+	if (FX_FROZEN)
 		return;
 
 	if (LightningTimer < -10) 
@@ -3766,7 +3774,7 @@ void RequestThunder(void)
 // [D] [T]
 void DoThunder(void)
 {
-	if (pauseflag)
+	if (FX_FROZEN)
 		return;
 
 	ThunderDistance = (ThunderDistance + 40) - rand() % 80;
@@ -3793,7 +3801,7 @@ void DoWeather(int weather)
 	if (weather != WEATHER_RAIN)
 		return;
 
-	if(pauseflag == 0)
+	if(!FX_FROZEN)
 	{
 		if (gEffectsTimer < 41) 
 		{
