@@ -11,6 +11,8 @@
 #include "objcoll.h"
 #include "sound.h"
 #include "system.h"
+#include "cutscene.h"
+#include "glaunch.h"
 
 #include "../utils/audio_source/snd_al_source.h"
 #include "../utils/audio_source/snd_wav_cache.h"
@@ -437,6 +439,22 @@ void Pistol_TestFire(void)
 		Fire(player[0].pPed);
 }
 
+// [mod] pistol allowed: Take a Ride and Undercover (story missions), one player,
+// not while the game has taken control (in-game cutscene, mission intro/outro)
+static int PistolAllowed(void)
+{
+	if (NumPlayers != 1)
+		return 0;
+
+	if (GameType != GAME_TAKEADRIVE && GameType != GAME_MISSION)
+		return 0;
+
+	if (NoPlayerControl || gInGameCutsceneActive)
+		return 0;
+
+	return 1;
+}
+
 // called once per frame from ProcessTannerPad
 void Pistol_Update(LPPEDESTRIAN tanner)
 {
@@ -447,7 +465,7 @@ void Pistol_Update(LPPEDESTRIAN tanner)
 	KeyPressed(SDL_SCANCODE_F, &prevF);
 	pressedF = prevF;	// held = autofire (fires every PISTOL_FIRE_INTERVAL frames)
 
-	if (GameType != GAME_TAKEADRIVE || !tanner || player[0].dying || tanner != player[0].pPed)
+	if (!PistolAllowed() || !tanner || player[0].dying || tanner != player[0].pPed)
 	{
 		gPistolDrawn = 0;
 		return;
@@ -907,7 +925,7 @@ void Pistol_CarFrame(void)
 	KeyPressed(SDL_SCANCODE_F, &prevF);
 	fire = prevF || gCarShootTest;
 
-	if (GameType != GAME_TAKEADRIVE || player[0].playerType != 1 || player[0].playerCarId < 0)
+	if (!PistolAllowed() || player[0].playerType != 1 || player[0].playerCarId < 0)
 	{
 		g_carArmFrames = 0;
 		return;

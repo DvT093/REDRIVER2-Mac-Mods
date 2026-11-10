@@ -51,6 +51,14 @@ void ModTest_Frame(void)
 	if (!gModTestMode)
 		return;
 
+	// in an Undercover mission (REDRIVER2_TEST_MISSION) the test clock waits until the player has control
+	{
+		extern char NoPlayerControl;
+		extern int gInGameCutsceneActive;
+		if (GameType == GAME_MISSION && gModTestMode != 11 && (NoPlayerControl || gInGameCutsceneActive))
+			return;
+	}
+
 	f++;
 
 	// gModTestMode 10 = far view: stay in the car, screenshot down the street ahead and behind

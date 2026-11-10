@@ -2245,6 +2245,12 @@ int redriver2_main(int argc, char** argv)
 			AttractMode = 0;
 
 			GameType = gModTestMode == 11 ? GAME_MISSION : GAME_TAKEADRIVE;
+
+			if (getenv("REDRIVER2_TEST_MISSION"))	// [mod test] run this test inside Undercover mission <n>
+			{
+				gCurrentMissionNumber = atoi(getenv("REDRIVER2_TEST_MISSION"));
+				GameType = GAME_MISSION;
+			}
 			SetState(STATE_GAMELAUNCH);
 		}
 		else if (!strcmp(argv[i], "-dumpcolours"))	// [mod] car colour extraction tool
