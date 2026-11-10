@@ -525,12 +525,76 @@ void GpsRoute_Clear(void)
 	g_lastTargetNode = -1;
 }
 
+// [mod] where the route goes: the Q waypoint first; in Undercover (story missions)
+// otherwise the nearest mission target that shows a blip/arrow on the map.
+static int GpsGoal(VECTOR* out)
+{
+	int i, best = -1;
+	long long bestD = 0;
+
+	if (gWaypointSet)
+	{
+		*out = gWaypointPos;
+		return 1;
+	}
+
+	if (GameType != GAME_MISSION || NumPlayers != 1 || !Mission.active || !MissionTargets)
+		return 0;
+
+	for (i = 0; i < MAX_MISSION_TARGETS; i++)
+	{
+		MS_TARGET* t = &MissionTargets[i];
+		VECTOR tv;
+		long long dx, dz, d;
+
+		if (TargetComplete(t, -1))
+			continue;
+
+		if (!(t->s.target_flags & TARGET_FLAG_VISIBLE_ALLP))
+			continue;
+
+		if (!(t->s.display_flags & (0x10 | 0x40)))	// same test as the map blip/arrow (mdraw.c)
+			continue;
+
+		switch (t->type)
+		{
+			case Target_Point:
+			case Target_Car:
+				tv.vx = t->s.car.posX;
+				tv.vz = t->s.car.posZ;
+				break;
+			case Target_Event:
+				tv = *(*(VECTOR**)&t->s.event.eventPos);
+				break;
+			default:
+				continue;
+		}
+
+		tv.vy = 0;
+		dx = tv.vx - player[0].pos[0];
+		dz = tv.vz - player[0].pos[2];
+		d = dx * dx + dz * dz;
+
+		if (best < 0 || d < bestD)
+		{
+			best = i;
+			bestD = d;
+			*out = tv;
+		}
+	}
+
+	return best >= 0;
+}
+
+// a moving goal (chased car) only gets a new target road piece after it moved this far
+#define GPS_GOAL_MOVE 1500
+
 void GpsRoute_Update(void)
 {
-	VECTOR from;
+	VECTOR from, goal;
 	int surf, start;
 
-	if (!gWaypointSet || NUM_NODES <= 0 || !EnsureBuffers())
+	if (!GpsGoal(&goal) || NUM_NODES <= 0 || !EnsureBuffers())
 	{
 		GpsRoute_Clear();
 		return;
@@ -540,18 +604,28 @@ void GpsRoute_Update(void)
 	from.vy = 0;
 	from.vz = player[0].pos[2];
 
-	// waypoint or level changed -> new target
-	if (g_lastLevel != GameLevel ||
-		g_lastWaypoint.vx != gWaypointPos.vx || g_lastWaypoint.vz != gWaypointPos.vz)
+	// goal or level changed -> new target
+	if (g_lastLevel != GameLevel || g_lastTargetNode < 0 ||
+		ABS(g_lastWaypoint.vx - goal.vx) > GPS_GOAL_MOVE || ABS(g_lastWaypoint.vz - goal.vz) > GPS_GOAL_MOVE)
 	{
+		int node = NearestRoadNode(&goal);
+
 		g_lastLevel = GameLevel;
-		g_lastWaypoint = gWaypointPos;
-		g_lastTargetNode = NearestRoadNode(&gWaypointPos);
-		g_lastStartNode = -1;
+		g_lastWaypoint = goal;
+
+		if (node != g_lastTargetNode)
+		{
+			g_lastTargetNode = node;
+			g_lastStartNode = -1;
+		}
 	}
 
 	if (g_lastTargetNode < 0)
 		return;
+
+	// the route always ends exactly at the goal, also while it moves
+	if (gGpsRouteCount > 1)
+		gGpsRoutePts[gGpsRouteCount - 1] = goal;
 
 	g_framesSinceCalc++;
 
@@ -591,6 +665,6 @@ void GpsRoute_Update(void)
 	g_framesSinceCalc = 0;
 	g_lastStartNode = start;
 
-	if (!Calculate(start, g_lastTargetNode, &from, &gWaypointPos))
+	if (!Calculate(start, g_lastTargetNode, &from, &goal))
 		gGpsRouteCount = 0;
 }

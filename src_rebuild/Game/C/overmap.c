@@ -1997,9 +1997,10 @@ VECTOR gWaypointPos = { 0 };
 int gWaypointLevel = -1;
 
 
-#define WAYPOINT_R 32
-#define WAYPOINT_G 96
-#define WAYPOINT_B 255
+// same flashing white dot as the game's own mission targets (mdraw.c DrawOverheadTarget)
+#define WAYPOINT_R 64
+#define WAYPOINT_G 64
+#define WAYPOINT_B 64
 
 // arrival radius in world units (Driver 2 uses 4096 per "unit"; cars are ~1000 long)
 #define WAYPOINT_ARRIVE_DIST 3000

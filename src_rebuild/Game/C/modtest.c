@@ -248,6 +248,31 @@ void ModTest_Frame(void)
 		return;
 	}
 
+	// gModTestMode 11 = Undercover mission: GPS route to the mission target, screenshots of the map
+	if (gModTestMode == 11)
+	{
+		extern int gGpsRouteCount;
+		extern VECTOR gGpsRoutePts[];
+
+		if (f % 60 == 0)
+		{
+			printf("MODTEST gpsmission f=%d mission=%d active=%d gametype=%d points=%d", f, gCurrentMissionNumber, Mission.active, GameType, gGpsRouteCount);
+			if (gGpsRouteCount > 1)
+				printf(" last=(%d,%d) player=(%d,%d)", gGpsRoutePts[gGpsRouteCount - 1].vx, gGpsRoutePts[gGpsRouteCount - 1].vz, player[0].pos[0], player[0].pos[2]);
+			printf("\n");
+			fflush(stdout);
+		}
+		if (f == 400 || f == 700)
+		{
+			char name[64];
+			sprintf(name, "modtest_gpsmission_%d_%d.bmp", gCurrentMissionNumber, f);
+			Shot(name);
+		}
+		if (f == 720)
+			exit(0);
+		return;
+	}
+
 	// gModTestMode 5 = GPS test: waypoint on this city's secret car, print the route
 	if (gModTestMode == 5)
 	{
@@ -261,6 +286,11 @@ void ModTest_Frame(void)
 		if (f == 100)
 		{
 			gWaypointPos.vx = sc[GameLevel][0]; gWaypointPos.vy = 0; gWaypointPos.vz = sc[GameLevel][1];
+			if (getenv("REDRIVER2_TEST_SHOT"))	// near the player so the dot is on the small map
+			{
+				gWaypointPos.vx = player[0].pos[0] - 16000;
+				gWaypointPos.vz = player[0].pos[2] + 9000;
+			}
 			gWaypointSet = 1;
 			gWaypointLevel = GameLevel;
 			GpsRoute_Update();
@@ -271,8 +301,13 @@ void ModTest_Frame(void)
 					gGpsRoutePts[gGpsRouteCount - 1].vx, gGpsRoutePts[gGpsRouteCount - 1].vz);
 			printf("\n");
 			fflush(stdout);
-			exit(0);
+			if (!getenv("REDRIVER2_TEST_SHOT"))
+				exit(0);
 		}
+		if (f == 140)
+			Shot("modtest_gps.bmp");
+		if (f == 150)
+			exit(0);
 		return;
 	}
 

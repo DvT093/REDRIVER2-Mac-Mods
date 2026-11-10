@@ -2233,12 +2233,18 @@ int redriver2_main(int argc, char** argv)
 				gModTestMode = 5;
 				i++;
 			}
+			else if (argc - i > 2 && !strcmp(argv[i + 1], "gpsmission"))	// Undercover mission <n>: GPS to the mission target
+			{
+				gModTestMode = 11;
+				gCurrentMissionNumber = atoi(argv[i + 2]);
+				i += 2;
+			}
 
 			SetFEDrawMode();
 			gInFrontend = 0;
 			AttractMode = 0;
 
-			GameType = GAME_TAKEADRIVE;
+			GameType = gModTestMode == 11 ? GAME_MISSION : GAME_TAKEADRIVE;
 			SetState(STATE_GAMELAUNCH);
 		}
 		else if (!strcmp(argv[i], "-dumpcolours"))	// [mod] car colour extraction tool
