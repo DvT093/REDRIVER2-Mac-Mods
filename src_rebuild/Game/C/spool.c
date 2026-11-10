@@ -559,6 +559,22 @@ void SpoolSYNC(void)
 	} while (spoolactive != 0);
 }
 
+// [mod] far city: texture page <i> of area <a> -> tpage number and sector (as RequestSpool counts it)
+int Spool_AreaTPage(int a, int i, int* tpage, int* sector)
+{
+	if (a < 0 || a >= NumAreas || i < 0 || i >= AreaData[a].num_tpages || i >= 16)
+		return 0;
+
+	*tpage = AreaTPages[a * 16 + i];
+	*sector = SpoolLumpOffset / CDSECTOR_SIZE + AreaData[a].gfx_offset + i * 17;
+	return 1;
+}
+
+int Spool_NumAreas(void)
+{
+	return NumAreas;
+}
+
 // [D] [T]
 void LoadInAreaTSets(int area)
 {

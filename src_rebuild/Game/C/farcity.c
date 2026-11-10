@@ -4,6 +4,7 @@
 #include "spool.h"
 #include "cell.h"
 #include "system.h"
+#include "texture.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +58,8 @@ static int g_farLoaded = 0;
 
 static FAR_REGION* g_iterRegion = NULL;
 static int g_farOpenFailed = 0;
+static int g_texLevel = -1;		// [mod] far textures, see bottom
+extern TEXINF* tpage_ids[128];
 
 void FarCity_Reset(void)
 {
@@ -80,6 +83,7 @@ void FarCity_Reset(void)
 	g_farFile = NULL;
 	g_farOpenFailed = 0;
 	g_farLoaded = 0;
+	g_texLevel = -1;
 	g_iterRegion = NULL;
 }
 
@@ -410,4 +414,127 @@ PACKED_CELL_OBJECT* FarCity_First(int cellx, int cellz, CELL_ITERATOR* pci, int 
 	pci->ppco = ppco;
 
 	return ppco;
+}
+
+
+// ---- [mod] far textures: average colour per texture ----
+//
+// VRAM holds only 19 texture page slots: the permanent pages plus the pages of the areas
+// around the player. Far buildings use pages of other areas, which are not in VRAM; their
+// texture_pages/texture_cluts entries point at whatever slot was last there (or the dummy
+// at 960,0), so they drew in purple/green garbage. The real pages don't fit, so
+// PlotBuildingModel draws those polygons flat in the texture's average colour instead,
+// read once per level from the level file (palette sector + 16 image sectors per page).
+
+extern int Spool_AreaTPage(int a, int i, int* tpage, int* sector);
+extern int Spool_NumAreas(void);
+
+static char g_texKnown[128];
+static int g_texCol[128][32];	// 0x00BBGGRR, -1 = fully transparent / unknown
+
+static void FarTex_LoadPage(int tp, int sector)
+{
+	static char buf[17 * CDSECTOR_SIZE];
+	u_short* pal;
+	u_char* img;
+	int npal, t;
+
+	g_texKnown[tp] = 1;
+
+	for (t = 0; t < 32; t++)
+		g_texCol[tp][t] = -1;
+
+	if (!ReadSectors(buf, sector, 17))
+		return;
+
+	npal = *(int*)buf;
+	pal = (u_short*)(buf + 4);
+	img = (u_char*)(buf + CDSECTOR_SIZE);
+
+	if (npal <= 0 || npal > 32 * 4)
+		return;
+
+	for (t = 0; t < tpage_texamts[tp] && t < 32; t++)
+	{
+		TEXINF* ti = &tpage_ids[tp][t];
+		u_short* clut = pal + (t < npal ? t : 0) * 16;
+		int x, y, n = 0, r = 0, g = 0, b = 0;
+		int step = (ti->width > 32 || ti->height > 32) ? 2 : 1;
+
+		for (y = ti->y; y < ti->y + ti->height && y < 256; y += step)
+		{
+			for (x = ti->x; x < ti->x + ti->width && x < 256; x += step)
+			{
+				int idx = img[y * 128 + x / 2];
+				u_short c;
+
+				idx = (x & 1) ? (idx >> 4) : (idx & 15);
+				c = clut[idx];
+
+				if (c == 0)		// transparent texel
+					continue;
+
+				r += (c & 31) << 3;
+				g += ((c >> 5) & 31) << 3;
+				b += ((c >> 10) & 31) << 3;
+				n++;
+			}
+		}
+
+		if (n > 0)
+			g_texCol[tp][t] = (r / n) | ((g / n) << 8) | ((b / n) << 16);
+	}
+}
+
+static void FarTex_LoadLevel(void)
+{
+	int a, i, tp, sector, n = 0;
+
+	g_texLevel = GameLevel;
+	memset(g_texKnown, 0, sizeof(g_texKnown));
+
+	for (a = 0; a < Spool_NumAreas(); a++)
+	{
+		for (i = 0; i < 16; i++)
+		{
+			if (!Spool_AreaTPage(a, i, &tp, &sector))
+				break;
+
+			if (tp < 0 || tp >= 128 || g_texKnown[tp])
+				continue;
+
+			FarTex_LoadPage(tp, sector);
+			n++;
+		}
+	}
+
+	if (gModTestMode)
+		printf("FARTEX level %d: %d area texture pages averaged\n", GameLevel, n);
+}
+
+// is texture page <tp> in VRAM right now (permanent or spooled)?
+int FarTex_Resident(int tp)
+{
+	static int enabled = -1;
+
+	if (enabled < 0)
+		enabled = getenv("REDRIVER2_FAR_TEX") ? atoi(getenv("REDRIVER2_FAR_TEX")) : 1;
+
+	if (!enabled)
+		return 1;	// old behaviour (test)
+
+	// spooled pages store slot+1, permanent pages their slot (slot 0 -> 0)
+	return tpageloaded[tp] != 0 || tpageslots[0] == tp;
+}
+
+// average colour 0x00BBGGRR of texture <id> on page <tp>; -1 if unknown or transparent
+int FarTex_Colour(int tp, int id)
+{
+	if (g_texLevel != GameLevel)
+		FarTex_LoadLevel();
+
+	if (tp < 0 || tp >= 128 || id < 0 || id >= 32 || !g_texKnown[tp])
+		return -1;
+
+	return g_texCol[tp][id];
 }

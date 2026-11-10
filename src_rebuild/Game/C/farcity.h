@@ -11,4 +11,7 @@ extern int FarCity_CellNeedsFar(int cellx, int cellz);
 extern PACKED_CELL_OBJECT* FarCity_First(int cellx, int cellz, CELL_ITERATOR* pci, int level);
 extern PACKED_CELL_OBJECT* FarCity_Next(CELL_ITERATOR* pci);
 
+extern int FarTex_Resident(int tp);
+extern int FarTex_Colour(int tp, int id);
+
 #endif

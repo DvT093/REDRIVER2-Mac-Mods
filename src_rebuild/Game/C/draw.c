@@ -905,6 +905,46 @@ void PlotBuildingModel(MODEL* model, int rot, _pct* pc)
 
 		if (g_plotFar ? FarFacing() : opz > 0)
 		{
+			// [mod] page not in VRAM (far building): flat in the texture's average colour
+			// instead of garbage from whatever page is in that slot (farcity.c FarTex)
+			if (!FarTex_Resident(polys->texture_set))
+			{
+				int avg = FarTex_Colour(polys->texture_set, polys->texture_id);
+				POLY_F4* pf;
+				int cr, cg, cb;
+
+				if (avg >= 0)
+				{
+					pf = (POLY_F4*)pc->primptr;
+					setPolyF4(pf);
+
+					cr = ((pc->colour & 0xff) * (avg & 0xff)) >> 7;
+					cg = (((pc->colour >> 8) & 0xff) * ((avg >> 8) & 0xff)) >> 7;
+					cb = (((pc->colour >> 16) & 0xff) * ((avg >> 16) & 0xff)) >> 7;
+
+					pf->r0 = MIN(cr, 255);
+					pf->g0 = MIN(cg, 255);
+					pf->b0 = MIN(cb, 255);
+
+					if (pc->colour & 0x02000000)
+						setSemiTrans(pf, 1);
+
+					gte_stsxy3(&pf->x0, &pf->x1, &pf->x2);
+
+					gte_ldv0(&srcVerts[polys->v2]);
+					gte_rtps();
+					gte_avsz4();
+					gte_stotz(&Z);
+					gte_stsxy(&pf->x3);
+
+					addPrim(OT_CLAMP(pc->ot + (Z >> 1)), pf);
+					pc->primptr += sizeof(POLY_F4);
+				}
+
+				polys = (PL_POLYFT4*)((char*)polys + pc->polySizes[ptype]);
+				continue;
+			}
+
 			pc->tpage = (*pc->ptexture_pages)[polys->texture_set];
 			pc->clut = (*pc->ptexture_cluts)[polys->texture_set][polys->texture_id];
 
