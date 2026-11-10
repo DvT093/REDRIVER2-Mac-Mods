@@ -292,7 +292,9 @@ void ModTest_Frame(void)
 			gModTestCarPad = MPAD_R3;								// Enter
 		if (f == 172)
 			gModTestCarPad = 0;
-		if (f == 200)
+		if (f == 200 && getenv("REDRIVER2_TEST_LONG") && f < atoi(getenv("REDRIVER2_TEST_LONG")))
+			;	// [diag] keep walking/standing around on foot
+		else if (f == 200 || (getenv("REDRIVER2_TEST_LONG") && f == atoi(getenv("REDRIVER2_TEST_LONG"))))
 		{
 			printf("MODTEST exit enter: playerType=%d (2 = on foot)\n", player[0].playerType);
 			fflush(stdout);

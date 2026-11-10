@@ -96,9 +96,40 @@ void SoundHandler(void)
 }
 
 // [D] [T]
+#ifndef PSX
+#include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
+extern void XM_DiagState(int Song_ID, int* songPos, int* play, int* curPos);
+static void SndDiag(void)
+{
+	static int on = -1, calls = 0; static double t0 = 0, prev = 0, maxGap = 0;
+	struct timespec ts; double now;
+	if (on < 0) on = getenv("REDRIVER2_SND_LOG") != NULL;
+	if (!on) return;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	now = ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6;
+	if (prev != 0 && now - prev > maxGap) maxGap = now - prev;
+	prev = now; calls++;
+	if (t0 == 0) t0 = now;
+	if (now - t0 >= 1000)
+	{
+		int sp, pl, cp;
+		XM_DiagState(Song_ID, &sp, &pl, &cp);
+		printf("SND vsync/s=%.1f maxGap=%.1fms song=%d play=%d songPos=%d curPos=%d paused=%d ptype=%d\n",
+			calls * 1000.0 / (now - t0), maxGap, Song_ID, pl, sp, cp, music_paused, player[0].playerType);
+		fflush(stdout);
+		calls = 0; maxGap = 0; t0 = now;
+	}
+}
+#endif
+
 void VsyncProc(void)
 {
 	vblcounter++;
+#ifndef PSX
+	SndDiag();
+#endif
 
 	if (Song_ID != -1)
 	{

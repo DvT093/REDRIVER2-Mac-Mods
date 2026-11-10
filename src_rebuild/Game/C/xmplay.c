@@ -394,6 +394,17 @@ XM_PlayStop
 	Silences SPU.
 *****************************************************************************/
 
+// [diag] music position for REDRIVER2_SND_LOG
+void XM_DiagState(int Song_ID, int* songPos, int* play, int* curPos)
+{
+	XMSONG* m;
+	*songPos = *play = *curPos = -1;
+	if (Song_ID < 0 || XMSongIDs[Song_ID] == -1)
+		return;
+	m = (XMSONG*)(XM_SngAddress[Song_ID]);
+	*songPos = m->SongPos; *play = m->XMPlay; *curPos = m->CurPos;
+}
+
 void XM_PlayStop(int Song_ID)
 {
 	if (XMSongIDs[Song_ID] == -1)

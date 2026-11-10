@@ -1615,6 +1615,8 @@ static void State_GameLoop60(void)
 	double now;
 	int stepped = 0;
 
+	VSync(-1);	// [mod] keep the PSX vblank callback (music XM_Update, sound timers) at 60/s
+
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	now = ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6;
 
