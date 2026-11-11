@@ -117,7 +117,11 @@ Alleen Apple Silicon, getest op macOS 15.
    git clone --recursive https://github.com/DvT093/REDRIVER2-Mac-Mods.git src
    ```
 3. **Speelmap:** maak naast `src/` een map `game/` met de spelbestanden van je disc (`DRIVER2/` en `install/Driver2CD1.bin`), zie de [installatiewiki van REDRIVER2](https://github.com/OpenDriver2/REDRIVER2/wiki/Installation-instructions). Zet daarin `src/mac/config.ini` en `src/mac/gunshot.wav` (als `game/mod/gunshot.wav`).
-4. **Stad tot de horizon (optioneel):** `python3 src/mac/extract_levels.py` haalt de levelbestanden uit je disc-image naar `game/mod/`. Zonder die bestanden werkt alles, alleen zonder de verre stad.
+4. **Stad tot de horizon (optioneel):** haal de levelbestanden uit je disc-image naar `game/mod/`:
+   ```bash
+   cd game && for d in LEVELS NLEVELS; do python3 ../src/mac/extract_levels.py install/Driver2CD1.bin mod/DRIVER2/$d DRIVER2/$d; done
+   ```
+   Zonder die bestanden werkt alles, alleen zonder de verre stad.
 5. **Bouwen:** kopieer `src/mac/build.sh` naast `src/` en draai `./build.sh`. Dat bouwt de OpenGL-versie en zet hem ondertekend in `game/`.
 6. **Spelen:** `cd game && ./REDRIVER2`, of zet `src/mac/app/` om tot `Driver 2.app` naast `game/`.
 
