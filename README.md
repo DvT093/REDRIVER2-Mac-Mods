@@ -125,6 +125,23 @@ Apple Silicon only, tested on macOS 15.
 
 All mods are in the OpenGL build. The Vulkan build still compiles, but without mods.
 
+## 🔓 First launch (macOS blocks the app)
+
+The app is signed locally, not by Apple, so macOS blocks it the first time it is opened after a download (AirDrop, zip, chat). Nothing is broken. This happens with the app from `mac/make_app.sh` that you share with someone, and with any copy that came from the internet.
+
+Do this once, after that it opens normally:
+
+1. Unzip and double-click **Driver 2.app**. Close the warning.
+2. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+
+Or with one line in Terminal (if the app is in Downloads):
+
+```bash
+xattr -cr ~/Downloads/"Driver 2.app"
+```
+
+Apple Silicon only (M1 or newer); it does not run on Intel Macs.
+
 ## 🧪 Testing
 
 `./REDRIVER2 -nointro -nofmv -modtest [mode]` plays a short scripted bit by itself, takes screenshots and quits. Modes and environment variables are in `src_rebuild/Game/C/modtest.c` and `mac/CLAUDE.md`.
