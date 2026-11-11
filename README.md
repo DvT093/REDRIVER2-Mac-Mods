@@ -132,9 +132,9 @@ The app is signed locally, not by Apple, so macOS blocks it the first time it is
 Do this once, after that it opens normally:
 
 1. Unzip and double-click **Driver 2.app**. Close the warning.
-2. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. The button only shows for a while after the blocked launch; if it is missing, double-click the app again first.
+2. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. Enter your login password. The button only shows for about an hour after the blocked launch; if it is missing, double-click the app again first.
 
-Same steps on macOS 15 Sequoia and macOS 26 Tahoe.
+Same steps on macOS 15, 26 and 27.
 
 Or with one line in Terminal (if the app is in Downloads):
 
