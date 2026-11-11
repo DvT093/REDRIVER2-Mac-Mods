@@ -3,7 +3,7 @@
 REDRIVER2 = open-source PC port of Driver 2 (PS1), built from the Apple Silicon branch. Diederick plays it and asks for gameplay mods. He is not a developer: answer in Dutch, short, and show results (screenshots), not code.
 
 ## Where things live
-- Source + git: `src/` (branch `mac-mods`, local only, never push). `src/src_rebuild/PsyCross` is a submodule on its own `mac-mods` branch: commit the submodule first, then the main repo (the submodule pointer).
+- Source + git: `src/` (branch `mac-mods`), public on GitHub as [DvT093/REDRIVER2-Mac-Mods](https://github.com/DvT093/REDRIVER2-Mac-Mods) (fork of ebellumat/REDRIVER2, default branch `mac-mods`). `src/src_rebuild/PsyCross` is a submodule on its own `mac-mods` branch, pushed to [DvT093/PsyCross](https://github.com/DvT093/PsyCross): commit and push the submodule first, then the main repo (the submodule pointer). Commit as `6576986+DvT093@users.noreply.github.com`, never the work address. README (Dutch + English mod list, keys) = `src/README.md`: add new mods and keys there.
 - Game logic: `src/src_rebuild/Game/C/` (mods marked `// [mod]`). Own files: `pistol.c`, `gps_route.c`, `lamps.c`, `traffic.c`, `farcity.c`, `modtest.c`, `colourdump.c`. PS1 API / renderer: `PsyCross/`.
 - Runtime: `game/` (binary, `config.ini`, `mod/gunshot.wav`, `mod/DRIVER2/LEVELS` + `NLEVELS` = extracted level copy for the far city, 83 MB, not in git). `Driver 2.app` starts `game/REDRIVER2` without Terminal.
 - Backup of files outside git: `src/mac/` (build.sh, config.ini, app launcher, gunshot.wav, `extract_levels.py`). Copy `game/config.ini` to `src/mac/config.ini` when you change it.
