@@ -1,151 +1,139 @@
 # 🚓 REDRIVER2 Mac Mods
 
-**Driver 2 (PlayStation, 2000) native op de Mac (Apple Silicon), met een stapel eigen mods: GPS-navigatie, een pistool, uitstappen tijdens het rijden, 60 fps, de stad tot aan de horizon en meer.**
+**Driver 2 (PlayStation, 2000) running natively on Apple Silicon Macs, with a pile of extra mods: GPS navigation, a pistol, jumping out of a moving car, 60 fps, the city all the way to the horizon and more.**
 
 ![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon-black?logo=apple) ![60 fps](https://img.shields.io/badge/60-fps-brightgreen) ![mods](https://img.shields.io/badge/mods-20%2B-orange) ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 
 > [!NOTE]
-> **Dit is geen eigen port, maar een fork.** Het echte werk is van [REDRIVER2](https://github.com/OpenDriver2/REDRIVER2) van OpenDriver2, de volledig terugvertaalde broncode van Driver 2, en de [Apple Silicon-versie](https://github.com/ebellumat/REDRIVER2/tree/vulkan-port) van [@ebellumat](https://github.com/ebellumat) ([PR #223](https://github.com/OpenDriver2/REDRIVER2/pull/223)). Deze fork voegt daar mods aan toe die de originele game nooit had.
+> **This is not a port of its own, it is a fork.** The real work is [REDRIVER2](https://github.com/OpenDriver2/REDRIVER2) by OpenDriver2, the fully reverse-engineered source of Driver 2, and the [Apple Silicon port](https://github.com/ebellumat/REDRIVER2/tree/vulkan-port) by [@ebellumat](https://github.com/ebellumat) ([PR #223](https://github.com/OpenDriver2/REDRIVER2/pull/223)). This fork adds mods the original game never had.
 
 > [!IMPORTANT]
-> **De game zelf zit niet in deze repo.** Je hebt je eigen Driver 2-disc nodig (PS1, US-versie, disc 1 is genoeg). Zie [Installeren](#-installeren).
+> **The game itself is not in this repo.** You need your own Driver 2 disc (PS1, US version; disc 1 is enough). See [Install](#-install).
 
-![GPS-route op de minikaart](docs/screenshots/gps-route.jpg)
-
-*English below.*
+![GPS route on the minimap](docs/screenshots/gps-route.jpg)
 
 ## ✨ Mods
 
-Alle mods zijn gemarkeerd met `// [mod]` in de code, de meeste staan in eigen bestanden in `src_rebuild/Game/C/` (`pistol.c`, `gps_route.c`, `farcity.c`, `traffic.c`, `lamps.c`).
+Every mod is marked `// [mod]` in the code; most live in their own files in `src_rebuild/Game/C/` (`pistol.c`, `gps_route.c`, `farcity.c`, `traffic.c`, `lamps.c`).
 
-### 🗺️ Rijden en navigeren
-
-| | |
-|---|---|
-| 🧭 **GPS-navigatie** | Zet op de grote kaart een punt (Q) en zie de route over de weg op de minikaart, zoals in GTA. In Undercover wijst de GPS vanzelf naar het missiedoel |
-| 🔍 **Secret cars op de kaart** | Een eigen icoontje waar de verstopte auto's staan, geen cheat-site meer nodig |
-| 🚦 **Speedlimiter** | Toets L houdt je net onder de snelheidslimiet van die weg, zodat de politie je laat rijden |
-| 🏃 **Uitstappen tijdens het rijden** | Enter springt uit een rijdende auto, ook tijdens een achtervolging |
-| ↪️ **Scherper sturen op Option** | De L1-knop van de PlayStation (verder en sneller sturen) zit op ⌥ Option. Niet op ⌘, want ⌘+Spatie/H/Q zijn macOS-sneltoetsen |
-
-### 🔫 Te voet
+### 🗺️ Driving and navigation
 
 | | |
 |---|---|
-| 🔫 **Pistool** | G trekt, F schiet. Mensen duiken weg, de politie komt, auto's krijgen deuken en vliegen na genoeg treffers in brand. Werkt ook in Undercover-missies |
-| 🚗 **Schieten uit de auto** | F schiet vooruit, met A/D naar links/rechts en met S naar achteren, met een arm uit het raam |
-| 🏃‍♂️ **Sprinten** | Shift om harder te rennen, vooruit en achteruit |
-| 📢 **Roepen** | De toeter (H) laat Tanner te voet "HEY!" roepen |
+| 🧭 **GPS navigation** | Set a point on the big map (Q) and follow the route along the roads on the minimap, like in GTA. In Undercover the GPS points to the mission target by itself |
+| 🔍 **Secret cars on the map** | An icon where the hidden cars are parked, no cheat site needed |
+| 🚦 **Speed limiter** | L keeps you just under the speed limit of the road, so the police leave you alone |
+| 🏃 **Exit while driving** | Enter jumps out of a moving car, even during a chase |
+| ↪️ **Sharper steering on Option** | The PlayStation's L1 (steer further and faster) is on ⌥ Option. Not on ⌘, because ⌘+Space/H/Q are macOS shortcuts |
 
-### 🏙️ De stad
-
-| | |
-|---|---|
-| 🌆 **Stad tot aan de horizon** | Aan het eind van een lange straat zie je de echte 3D-gebouwen in plaats van de geschilderde skyline |
-| 🎨 **Geen paarse huizen meer** | Verre gebouwen zonder geladen textuur krijgen de gemiddelde kleur van hun echte textuur |
-| 🚕 **Drukker verkeer** | Meer auto's en voetgangers op straat |
-| 💡 **Lantaarnpalen vallen om** | Lantaarnpalen en stoplichten knakken als je ze raakt |
-| 🌑 **Schaduwen overal** | Tanners schaduw valt ook op stoep en straat, en schaduwen werken samen met de Z-buffer |
-
-### 🏁 Menu en auto's
+### 🔫 On foot
 
 | | |
 |---|---|
-| ▶️ **Take a Ride bovenaan** | Enter, Enter, Enter en je rijdt |
-| 🌍 **Alle steden vrij** | Alle vier de steden meteen kiesbaar, zonder het verhaal uit te spelen |
-| 🚙 **Alle auto's vrij** | Ook de auto's die pas na het verhaal vrijkomen, en het busje in Havana (iets hoger op zijn wielen) |
-| 🎨 **Autokleur kiezen** | Q in het automenu wisselt tussen de kleuren die de game voor die auto heeft |
+| 🔫 **Pistol** | G draws, F fires. People dive away, the police come, cars dent and catch fire after enough hits. Also works in Undercover missions |
+| 🚗 **Drive-by shooting** | F fires forward, with A/D to the left/right and with S backwards, with an arm out of the window |
+| 🏃‍♂️ **Sprint** | Shift to run faster, forwards and backwards |
+| 📢 **Shout** | The horn (H) makes Tanner shout "HEY!" on foot |
+
+### 🏙️ The city
+
+| | |
+|---|---|
+| 🌆 **City to the horizon** | At the end of a long street you see the real 3D buildings instead of the painted skyline |
+| 🎨 **No more purple buildings** | Distant buildings whose texture is not loaded get the average colour of their real texture |
+| 🚕 **Busier streets** | More cars and pedestrians |
+| 💡 **Lamp posts fall over** | Lamp posts and traffic lights snap when you hit them |
+| 🌑 **Shadows everywhere** | Tanner's shadow also falls on pavements and streets, and shadows work with the Z-buffer |
+
+### 🏁 Menu and cars
+
+| | |
+|---|---|
+| ▶️ **Take a Ride on top** | Enter, Enter, Enter and you are driving |
+| 🌍 **All cities unlocked** | All four cities selectable right away, without finishing the story |
+| 🚙 **All cars unlocked** | Including the cars that only unlock after the story, and the Havana van (sitting a bit higher on its wheels) |
+| 🎨 **Pick the car colour** | Q in the car menu cycles through the colours the game has for that car |
 
 ### 🍎 Mac
 
 | | |
 |---|---|
-| 🎮 **60 fps** | De game rekent op 30 Hz zoals het origineel, maar tekent elk scherm-frame met vloeiende camera en auto's ertussen |
-| 🎵 **Muziek** | De muziek speelt weer op tempo (stond in de 60 fps-loop bijna stil) |
-| 🖥️ **Vsync op 60 Hz-schermen** | Geen 20 fps meer op externe schermen |
-| 📦 **Eigen .app** | Dubbelklikken zonder Terminal, en `mac/make_app.sh` maakt een losse app om te delen |
+| 🎮 **60 fps** | The game still simulates at 30 Hz like the original, but draws every screen refresh with the camera and cars interpolated in between |
+| 🎵 **Music** | Music plays at the right tempo again (it nearly stopped in the 60 fps loop) |
+| 🖥️ **Vsync on 60 Hz screens** | No more 20 fps on external displays |
+| 📦 **Own .app** | Double-click to play without Terminal; `mac/make_app.sh` builds a standalone app |
 
 ## 📸 Screenshots
 
-**Pistool in een Undercover-missie:**
+**The pistol in an Undercover mission:**
 
-![Tanner schiet op een auto](docs/screenshots/pistool.jpg)
+![Tanner shooting at a car](docs/screenshots/pistol.jpg)
 
-**De stad tot aan de horizon (Rio):**
+**The city up to the horizon (Rio):**
 
-![Rio met gebouwen tot de horizon](docs/screenshots/draw-distance-rio.jpg)
+![Rio with buildings to the horizon](docs/screenshots/draw-distance-rio.jpg)
 
-**GPS-punt op de kaart en Take a Ride bovenaan:**
+**A GPS point on the map, and Take a Ride on top:**
 
-![GPS op de kaart](docs/screenshots/gps-kaart.jpg) ![Hoofdmenu](docs/screenshots/menu-take-a-ride.jpg)
+![GPS on the map](docs/screenshots/gps-map.jpg) ![Main menu](docs/screenshots/menu-take-a-ride.jpg)
 
-**Het busje in Havana, met kleurkeuze:**
+**The Havana van, with colour choice:**
 
-![Busje kiezen in Take a Ride](docs/screenshots/busje-kleur-kiezen.jpg)
+![Choosing the van in Take a Ride](docs/screenshots/havana-van-colour.jpg)
 
-## ⌨️ Toetsen
+## ⌨️ Controls
 
-| Toets | Doet |
+| Key | Does |
 |---|---|
-| ↑ / ↓ | Gas / remmen en achteruit |
-| ← / → | Sturen |
-| ⌥ Option | Scherper sturen (met een pijltje erbij) |
-| Spatie | Handrem; te voet: instappen |
-| Rechter Shift | Burnout |
-| Enter | Uitstappen / instappen, ook tijdens het rijden |
-| H | Toeter; te voet roept Tanner "HEY!" |
-| A / D / S | Kijk links / rechts / achter |
-| C | Andere camera |
-| L | Speedlimiter aan/uit |
-| Shift (te voet) | Sprinten |
-| G / F (te voet) | Pistool trekken / schieten |
-| F (in de auto) | Schieten; met A/D opzij, met S naar achteren |
-| Esc | Pauze (met "Show map") |
-| Q (grote kaart) | GPS-punt zetten of weghalen |
-| Q (automenu) | Andere kleur |
-| F3 / F6 / F7 / F12 | Gladde textures / Z-buffer / vrije camera / screenshot |
+| ↑ / ↓ | Accelerate / brake and reverse |
+| ← / → | Steer |
+| ⌥ Option | Sharper steering (together with an arrow) |
+| Space | Handbrake; on foot: get in |
+| Right Shift | Burnout |
+| Enter | Get out / in, also while driving |
+| H | Horn; on foot Tanner shouts "HEY!" |
+| A / D / S | Look left / right / back |
+| C | Change camera |
+| L | Speed limiter on/off |
+| Shift (on foot) | Sprint |
+| G / F (on foot) | Draw pistol / fire |
+| F (in the car) | Fire; with A/D to the side, with S backwards |
+| Esc | Pause (with "Show map") |
+| Q (big map) | Set or remove the GPS point |
+| Q (car menu) | Next colour |
+| F3 / F6 / F7 / F12 | Smooth textures / Z-buffer / free camera / screenshot |
 
-De toetsen staan in `mac/config.ini` (`[kbcontrols_game]`). Zet commentaar daar op een eigen regel die met `;` begint: tekst achter een waarde wordt deel van de toetsnaam.
+Keys are set in `mac/config.ini` (`[kbcontrols_game]`). Put comments there on their own line starting with `;`: text after a value becomes part of the key name.
 
-## 📥 Installeren
+## 📥 Install
 
-Alleen Apple Silicon, getest op macOS 15.
+Apple Silicon only, tested on macOS 15.
 
-1. **Gereedschap:** `xcode-select --install`, en met [Homebrew](https://brew.sh): `brew install premake sdl2 jpeg openal-soft`
+1. **Tools:** `xcode-select --install`, and with [Homebrew](https://brew.sh): `brew install premake sdl2 jpeg openal-soft`
 2. **Code:**
    ```bash
    git clone --recursive https://github.com/DvT093/REDRIVER2-Mac-Mods.git src
    ```
-3. **Speelmap:** maak naast `src/` een map `game/` met de spelbestanden van je disc (`DRIVER2/` en `install/Driver2CD1.bin`), zie de [installatiewiki van REDRIVER2](https://github.com/OpenDriver2/REDRIVER2/wiki/Installation-instructions). Zet daarin `src/mac/config.ini` en `src/mac/gunshot.wav` (als `game/mod/gunshot.wav`).
-4. **Stad tot de horizon (optioneel):** haal de levelbestanden uit je disc-image naar `game/mod/`:
+3. **Game folder:** next to `src/`, make a `game/` folder with the game files from your disc (`DRIVER2/` and `install/Driver2CD1.bin`), see the [REDRIVER2 installation wiki](https://github.com/OpenDriver2/REDRIVER2/wiki/Installation-instructions). Put `src/mac/config.ini` in it, and `src/mac/gunshot.wav` as `game/mod/gunshot.wav`.
+4. **City to the horizon (optional):** extract the level files from your disc image into `game/mod/`:
    ```bash
    cd game && for d in LEVELS NLEVELS; do python3 ../src/mac/extract_levels.py install/Driver2CD1.bin mod/DRIVER2/$d DRIVER2/$d; done
    ```
-   Zonder die bestanden werkt alles, alleen zonder de verre stad.
-5. **Bouwen:** kopieer `src/mac/build.sh` naast `src/` en draai `./build.sh`. Dat bouwt de OpenGL-versie en zet hem ondertekend in `game/`.
-6. **Spelen:** `cd game && ./REDRIVER2`, of zet `src/mac/app/` om tot `Driver 2.app` naast `game/`.
+   Without them everything works, just without the distant city.
+5. **Build:** copy `src/mac/build.sh` next to `src/` and run `./build.sh`. It builds the OpenGL version and puts it, signed, in `game/`.
+6. **Play:** `cd game && ./REDRIVER2`, or turn `src/mac/app/` into a `Driver 2.app` next to `game/`.
 
-Alle mods zitten in de OpenGL-versie. De Vulkan-versie bouwt nog wel, maar zonder mods.
+All mods are in the OpenGL build. The Vulkan build still compiles, but without mods.
 
-## 🧪 Testen
+## 🧪 Testing
 
-`./REDRIVER2 -nointro -nofmv -modtest [modus]` speelt zelf een stukje, maakt screenshots en sluit af. Modi en omgevingsvariabelen staan in `src_rebuild/Game/C/modtest.c` en `mac/CLAUDE.md`.
+`./REDRIVER2 -nointro -nofmv -modtest [mode]` plays a short scripted bit by itself, takes screenshots and quits. Modes and environment variables are in `src_rebuild/Game/C/modtest.c` and `mac/CLAUDE.md`.
 
 ## 🙏 Credits
 
-- [OpenDriver2 / REDRIVER2](https://github.com/OpenDriver2/REDRIVER2) (SoapyMan, Fireboyd78 en anderen): de terugvertaalde game en Psy-Cross. De originele README staat in [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md)
-- [@ebellumat](https://github.com/ebellumat): de macOS Apple Silicon- en Vulkan-port
-- Driver 2 is van Reflections Interactive / Infogrames. Deze repo bevat geen spelbestanden
-- De mods zijn gemaakt met [Claude Code](https://claude.com/claude-code)
-
----
-
-## 🇬🇧 English
-
-**Driver 2 (PS1, 2000) running natively on Apple Silicon Macs, with a pile of extra mods.** This is a fork of [REDRIVER2](https://github.com/OpenDriver2/REDRIVER2) (the fully reverse-engineered Driver 2 source) on top of [@ebellumat's Apple Silicon port](https://github.com/ebellumat/REDRIVER2/tree/vulkan-port). Bring your own Driver 2 disc (US, disc 1); no game data is included.
-
-**Mods:** GPS navigation on the minimap (set a point on the big map with Q; automatic in Undercover missions), secret cars on the map, speed limiter (L), jump out of a moving car (Enter), sharper steering on ⌥ Option (PS1 L1), a pistol on foot (G/F) with fleeing people, police, dents and fires, drive-by shooting (F, with A/D/S for left/right/back), sprinting (Shift), shouting (H on foot), the real city up to the horizon instead of the painted skyline, no more purple distant buildings, busier traffic, lamp posts that fall over, shadows on every surface and with the Z-buffer, Take a Ride at the top of the menu, all cities and all cars unlocked, car colour choice (Q), 60 fps with interpolation, fixed music tempo and vsync on 60 Hz screens.
-
-**Install:** see the Dutch steps above: `brew install premake sdl2 jpeg openal-soft`, `git clone --recursive`, put your disc data in `game/` per the [REDRIVER2 wiki](https://github.com/OpenDriver2/REDRIVER2/wiki/Installation-instructions), then run `mac/build.sh`. All mods are in the OpenGL build.
+- [OpenDriver2 / REDRIVER2](https://github.com/OpenDriver2/REDRIVER2) (SoapyMan, Fireboyd78 and others): the reverse-engineered game and Psy-Cross. The original README is in [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md)
+- [@ebellumat](https://github.com/ebellumat): the macOS Apple Silicon and Vulkan port
+- Driver 2 is by Reflections Interactive / Infogrames. This repo contains no game data
+- The mods were made with [Claude Code](https://claude.com/claude-code)
 
 License: MIT, like REDRIVER2.
