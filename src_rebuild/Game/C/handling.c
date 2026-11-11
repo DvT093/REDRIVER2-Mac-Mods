@@ -1,4 +1,5 @@
 ﻿#include <stdlib.h>
+#include <stdio.h>
 #define HAVANA_VAN_LIFT -40	// [mod] wheel mount offset for the Havana van: negative = body higher (-70 absurd, -15 too low; -40 in between, his choice 8 nov 2026)
 #include "driver2.h"
 #include "handling.h"
@@ -1338,6 +1339,15 @@ void ProcessCarPad(CAR_DATA* cp, u_int pad, char PadSteer, char use_analogue)
 			cp->hd.autoBrake = 0;
 		else
 			cp->hd.autoBrake++;
+	}
+
+	// [mod] diag: REDRIVER2_STEER_LOG=1 prints the steering input of the player car
+	if (cp->controlType == CONTROL_TYPE_PLAYER)
+	{
+		static int steerLog = -1;
+		if (steerLog < 0) { const char* e = getenv("REDRIVER2_STEER_LOG"); steerLog = e && *e == '1'; }
+		if (steerLog)
+			printf("[steer] pad=%04x L1=%d L=%d R=%d analog=%d wheel=%d\n", pad & 0xffff, (pad & CAR_PAD_FASTSTEER) != 0, (pad & CAR_PAD_LEFT) != 0, (pad & CAR_PAD_RIGHT) != 0, use_analogue, cp->wheel_angle);
 	}
 
 	// center steering
