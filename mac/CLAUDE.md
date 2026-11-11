@@ -27,5 +27,15 @@ REDRIVER2 = open-source PC port of Driver 2 (PS1), built from the Apple Silicon 
 - Keys for mods are read with `SDL_GetKeyboardState` (not in replays). Up+Space = the game's leave-car combo; moving exit is Enter only.
 - Car bitfields are `CARBITS` (128-bit) for `MAX_CARS` 120; `CAR_DATA.id` is a char.
 - Far distance: GTE depth is 16-bit (saturates ~65535 units), OT index past `OTSIZE` was silently dropped (`OT_CLAMP`), integer back-face test drops sub-pixel faces (`FarFacing`), renderer far plane 8000. PsyCross used to make one draw split per polygon; keep `AddSplit` free of the depth comparison.
+- `config.ini` has no inline comments: `l1=Left GUI   # note` makes the whole rest of the line the key name, so the key silently falls back to its default. Put comments on their own line starting with `;`.
 - The red triangles at the bottom during a chase are the original cop indicators, not a bug.
 - Chicago car slot 8 crashes without `CARMODEL_11_clean.MDL`; keep it out of the car menu.
+- 60 Hz screens (LG UltraFine, MacBook Air): the 30 fps limiter plus swap interval 2 gave exactly 50 ms/frame (20 fps), with or without mods (old 30 Oct build measured the same). On the 120 Hz laptop screen it was fine. Fixed in `PsyX_BeginScene` (`PsyX_main.cpp`): 60 Hz -> interval 1. Keep `vsync=1`. A flat 50.0 ms in every test = suspect vsync/screen first, not a commit.
+
+## Share with someone else
+- `src/mac/make_app.sh` builds `dist/Driver 2.app` + `dist/Driver 2.zip`: binary, Homebrew dylibs (incl. SDL3, which sdl2-compat loads), game data and disc 1 image all inside the app. Disc 2 is not used. Apple Silicon only. Run it again after every mod build.
+
+## 60 fps (interp.c)
+- Sim stays 30 Hz on the real clock (`State_GameLoop60` in main.c); every screen refresh draws, with camera, cars and peds lerped between the previous and current step (`interp.c`). `REDRIVER2_60FPS=0` = old loop. `REDRIVER2_FPS_LOG=1` prints draws/s and steps/s (should be ~60 / 30).
+- Camera (`InitCamera` + `DoFreeCamera`) now runs once per sim step, not in `RenderGame2`. `FrameCnt` counts sim steps; `gRenderCnt` counts draws (buffer swap, `ObjectDrawnValue`).
+- Anything in the draw path that changes state (particles, timers, flashes, frame counters) must skip when `gInterpFrame` is set: use `FX_FROZEN` (pause.h) or `if (!gInterpFrame)`. New mod drawing code: same rule, or it runs twice as fast.
